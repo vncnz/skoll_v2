@@ -16,7 +16,7 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, WindowInfo}, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, WindowInfo}, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -31,7 +31,6 @@ mod commands;
 mod niri;
 mod utils;
 mod battery;
-mod security;
 mod countdown;
 mod pills;
 
@@ -194,18 +193,6 @@ fn main() {
         dbg_println!("{}", "Battery listener OK".green().to_string());
     });
 
-    let (tx_pipewire, rx_pipewire): (Sender<MicCameraStatus>, Receiver<MicCameraStatus>) = mpsc::channel();
-    thread::spawn(|| {
-        futures::executor::block_on(async {
-            if let Err(e) = start_security_monitor(tx_pipewire) {
-                log_to_file(format!("PipeWire listener error: {:?}", e));
-                dbg_println!("{}", format!("PipeWire listener error: {:?}", e).red().to_string());
-            } else {
-                dbg_println!("{}", "PipeWire listener OK".green().to_string());
-            }
-        });
-    });
-
     let (tx_niri, rx_niri): (Sender<Vec<WindowInfo>>, Receiver<Vec<WindowInfo>>) = mpsc::channel();
     thread::spawn(|| {
         if let Err(e) = start_niri_listener(tx_niri) {
@@ -229,8 +216,6 @@ fn main() {
                 /*
                 ("battery", "false", Duration::from_secs(5)),
                 ("battery", "true", Duration::from_secs(2)),
-                ("security", "on", Duration::from_secs(4)),
-                ("security", "off", Duration::from_secs(2)),
                 ("wob", "0.35", Duration::from_secs(1)),
                 ("wob", "0.45", Duration::from_millis(200)),
                 ("wob", "0.55", Duration::from_millis(300)),
@@ -278,14 +263,6 @@ fn main() {
                 ("timer", time) => {
                     app.set_countdown(&time).ok();
                     app.request_redraw("demo timer");
-                },
-                ("security", "on") => {
-                    app.update_security_data(MicCameraStatus { mic_active: vec!["Firefox".to_string()], camera_active: vec![], pristine: true });
-                    app.request_redraw("demo security on");
-                },
-                ("security", "off") => {
-                    app.update_security_data(MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: true });
-                    app.request_redraw("demo security off");
                 },
                 ("wob", val) => {
                     if let Ok(value) = val.parse::<f64>() {
@@ -356,17 +333,6 @@ fn main() {
         /* if is_camera_in_use() {
             eprintln!("{}", "Camera in use!".red());
         } */
-
-        if let Ok(status) = rx_pipewire.try_recv() {
-            // app.mic_active = status.mic_active;
-            // app.camera_active = status.camera_active;
-            // app.request_redraw(&"pipewire");
-            // eprintln!("{}", "PipeWire update".bright_blue());
-            log_to_file(format!("{:?}", status).to_string());
-            println!("{}", format!("{:?}", status).red());
-            app.update_security_data(status);
-            app.request_redraw("security updated"); // TODO: in the new system, pill will know if it needs redraw, without forcing here
-        }
 
         // Poll niri events for window attention
         if let Ok(urgent_windows) = rx_niri.try_recv() {

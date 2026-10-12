@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, pills::{Pill, PillModuleTrait}, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = 0;
@@ -58,7 +58,6 @@ pub struct SkollLayer {
     // pub(crate) animator: Animator,
     // pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
-    // pub(crate) security: crate::security::MicCameraStatus,
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
     // pub(crate) timer: Countdown,
@@ -101,7 +100,6 @@ impl SkollLayer {
             // animator: Animator::new(),
             // frame_model: FrameModel::new(),
             is_waiting_for_frame: false,
-            // security: MicCameraStatus { mic_active: vec!(), camera_active: vec!(), pristine: false },
             batteries: vec![],
             batteries_pristine: false,
             // timer: Countdown::new(),
@@ -137,11 +135,6 @@ impl SkollLayer {
 
     pub fn close_layer(&mut self) {
         self.set_layer_visibility(false);
-    }
-
-    pub fn update_security_data (&mut self, data: MicCameraStatus) {
-        self.pill_container.update_data_security(&data);
-        // self.security = data; // TODO: Deprecated? Remove it?
     }
 
     pub fn update_niri_data (&mut self, data: Vec<WindowInfo>) {

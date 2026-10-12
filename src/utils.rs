@@ -119,10 +119,8 @@ use cairo::Context;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AnimationKey {
-    // NotificationHeight,
     // IconsHeight,
     WobHeightRatio,
-    // SecurityNotchRatio,
     // BatteriesNotchRatio
 }
 
@@ -243,7 +241,6 @@ pub struct FrameModel {
     // pub(crate) notif_height_ratio: f64,
     // pub(crate) icons_ratio: f64,
     pub(crate) wob_height: f64,
-    // pub(crate) security_height: f64,
     // pub(crate) batteries_height: f64
 }
 
@@ -253,27 +250,22 @@ impl FrameModel {
             // notif_height_ratio: 0.0,
             // icons_ratio: 0.0,
             wob_height: 0.0,
-            // security_height: 0.0,
             // batteries_height: 0.0
         }
     }
 
     pub fn set(&mut self, id: AnimationKey, val: f64) {
         match id {
-            // AnimationKey::NotificationHeight => self.notif_height_ratio = val, // TODO: Deprecated
             // AnimationKey::IconsHeight => self.icons_ratio = val,
             AnimationKey::WobHeightRatio => self.wob_height = val,
-            // AnimationKey::SecurityNotchRatio => self.security_height = val,
             // AnimationKey::BatteriesNotchRatio => self.batteries_height = val
         }
     }
 
     pub fn get(&self, id: AnimationKey) -> f64 {
         match id {
-            // AnimationKey::NotificationHeight => self.notif_height_ratio, // TODO: Deprecated
             // AnimationKey::IconsHeight => self.icons_ratio,
             AnimationKey::WobHeightRatio => self.wob_height,
-            // AnimationKey::SecurityNotchRatio => self.security_height,
             // AnimationKey::BatteriesNotchRatio => self.batteries_height
         }
     }

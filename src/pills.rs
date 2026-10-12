@@ -6,7 +6,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    config::Config, countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, niri::WindowInfo, security::MicCameraStatus, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    config::Config, countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, niri::WindowInfo, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -459,61 +459,6 @@ impl PillModuleWarnings {
 }
 
 
-
-
-pub struct PillModuleSecurity {
-    base: PillModuleBase,
-    animation: AnimationState,
-}
-
-impl PillModuleTrait for PillModuleSecurity {
-    fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        if self.base.cached_layout.is_some() {
-            let r = 2.0;
-            rounded_rect_gradient(&cr, x + PILL_MARGIN / 2.0, y + 3.0, rect_width - PILL_MARGIN, rect_height - 6.0, r, vec![(0.0, (1.0, 0.58, 0.0, 1.0))], crate::utils::GradientDirection::Horizontal, false, None);
-        }
-
-        self.base.draw_centered(&cr, rect_width, rect_height, x, y);
-    }
-
-    fn animation_state(&mut self) -> &mut AnimationState {
-        &mut self.animation
-    }
-}
-
-impl PillModuleSecurity {
-    pub fn new() -> Self {
-        PillModuleSecurity {
-            base: PillModuleBase::new(),
-            animation: AnimationState::new()
-        }
-    }
-
-    pub fn update_data(
-        &mut self,
-        cr: &cairo::Context,
-        security: &MicCameraStatus
-    ) -> bool {
-        let text = security.mic_active.clone().into_iter().map(|s| format!("󰍬 {s}"))
-            .chain(security.camera_active.clone().into_iter().map(|s| format!("󰖠 {s}")))
-            .collect::<Vec<_>>().join("  ·  ");
-
-        let target = if text.is_empty() {
-            self.base.clear();
-            (0.0, 0.0)
-        } else {
-            let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
-            let target = (sizes.0, sizes.1);
-            self.base
-                .set_layout(layout, target, text, (0.0, 0.0, 0.0, 1.0));
-            target
-        };
-
-        dbg_println!("{}", "PillSecurity update_data".blue());
-        self.animation.set_target(target)
-    }
-}
-
 pub struct PillModuleNiri {
     base: PillModuleBase,
     animation: AnimationState,
@@ -689,35 +634,6 @@ impl PillModuleDevices {
 
 
 
-pub struct PillNotificationFull {
-    appname_base: PillModuleBase,
-    body_base: PillModuleBase,
-    animation: AnimationState,
-    current_expire: Option<Instant>,
-    display_timeout: Duration,
-}
-
-impl PillModuleTrait for PillNotificationFull {
-    fn draw(&mut self, cr: &Context, _rect_width: f64, _rect_height: f64, x: f64, y: f64) {
-        // self.body_base.draw_centered(&cr, rect_width, rect_height, x, y);
-
-        let x = x + PILL_MARGIN;
-        let mut y = y;
-
-        let sizes = self.appname_base.cached_sizes.unwrap_or_default();
-        self.appname_base.draw_centered(cr, sizes.0, sizes.1, x, y);
-        y += sizes.1 + 4.0;
-
-        let sizes = self.body_base.cached_sizes.unwrap_or_default();
-        self.body_base.draw_centered(cr, sizes.0, sizes.1, x, y);
-        // *y += sizes.1 + 4.0;
-    }
-
-    fn animation_state(&mut self) -> &mut AnimationState {
-        &mut self.animation
-    }
-}
-
 
 
 
@@ -735,8 +651,7 @@ impl PillModuleTrait for PillNotificationFull {
 
 
 enum PillMode {
-    Normal,
-    Notification(u8)
+    Normal
 }
 
 pub struct Pill {
@@ -752,7 +667,6 @@ pub struct Pill {
     pill_clock: PillModuleClock,
     pill_battery: PillModuleLaptopBattery,
     pill_warnings: PillModuleWarnings,
-    pill_security: PillModuleSecurity,
     pill_niri: PillModuleNiri,
     pill_countdown: PillModuleCountdown,
     pill_devices: PillModuleDevices,
@@ -760,7 +674,6 @@ pub struct Pill {
     pill_clock_rect: (f64, f64),
     pill_battery_rect: (f64, f64),
     pill_warnings_rect: (f64, f64),
-    pill_security_rect: (f64, f64),
     pill_niri_rect: (f64, f64),
     pill_countdown_rect: (f64, f64),
     pill_devices_rect: (f64, f64),
@@ -811,14 +724,12 @@ impl Pill {
             pill_clock: PillModuleClock::new(),
             pill_battery: PillModuleLaptopBattery::new(),
             pill_warnings: PillModuleWarnings::new(),
-            pill_security: PillModuleSecurity::new(),
             pill_niri: PillModuleNiri::new(),
             pill_countdown: PillModuleCountdown::new(),
             pill_devices: PillModuleDevices::new(config.show_devices_battery_max_level),
             pill_clock_rect: (0.0, 0.0),
             pill_battery_rect: (0.0, 0.0),
             pill_warnings_rect: (0.0, 0.0),
-            pill_security_rect: (0.0, 0.0),
             pill_niri_rect: (0.0, 0.0),
             pill_countdown_rect: (0.0, 0.0),
             pill_devices_rect: (0.0, 0.0),
@@ -870,16 +781,6 @@ impl Pill {
         return changed.0 || changed.1
     }
 
-    pub fn update_data_security(&mut self, security: &MicCameraStatus) -> bool {
-        let changed = self.pill_security.update_data(&self.dummy_context, security);
-        if changed {
-            self.pill_security_rect = self.pill_security.get_current_rect();
-            self.needs_recalc = true; // Well, to have the same width on change is very unlikely, I can set true without check
-            self.needs_redraw = true;
-        }
-        changed
-    }
-
     pub fn update_data_niri(&mut self, data: Vec<WindowInfo>) -> bool {
         let changed = self.pill_niri.update_data(&self.dummy_context, data);
         if changed {
@@ -919,24 +820,22 @@ impl Pill {
         }
     }
 
-    fn normal_modules_mut(&mut self) -> [&mut dyn PillModuleTrait; 7] {
+    fn normal_modules_mut(&mut self) -> [&mut dyn PillModuleTrait; 6] {
         [
             &mut self.pill_clock,
             &mut self.pill_battery,
             &mut self.pill_warnings,
-            &mut self.pill_security,
             &mut self.pill_niri,
             &mut self.pill_countdown,
             &mut self.pill_devices,
         ]
     }
 
-    fn normal_rects_mut(&mut self) -> [(&mut (f64, f64), &mut dyn PillModuleTrait); 7] {
+    fn normal_rects_mut(&mut self) -> [(&mut (f64, f64), &mut dyn PillModuleTrait); 6] {
         [
             (&mut self.pill_clock_rect, &mut self.pill_clock),
             (&mut self.pill_battery_rect, &mut self.pill_battery),
             (&mut self.pill_countdown_rect, &mut self.pill_countdown),
-            (&mut self.pill_security_rect, &mut self.pill_security),
             (&mut self.pill_devices_rect, &mut self.pill_devices),
             (&mut self.pill_warnings_rect, &mut self.pill_warnings),
             (&mut self.pill_niri_rect, &mut self.pill_niri),
@@ -954,7 +853,7 @@ impl Pill {
             .sum::<f64>();
 
         dbg_println!("{} recalculate_normal_target rect_width:{rect_width:?}", "PillContainer".blue());
-        dbg_println!("{} recalculate_normal_target rects: clock:{:?} battery:{:?} warnings:{:?} countdown:{:?} security:{:?} niri:{:?} devices:{:?}", "PillContainer".blue(), self.pill_clock_rect, self.pill_battery_rect, self.pill_warnings_rect, self.pill_countdown_rect, self.pill_security_rect, self.pill_niri_rect, self.pill_devices_rect);
+        dbg_println!("{} recalculate_normal_target rects: clock:{:?} battery:{:?} warnings:{:?} countdown:{:?} niri:{:?} devices:{:?}", "PillContainer".blue(), self.pill_clock_rect, self.pill_battery_rect, self.pill_warnings_rect, self.pill_countdown_rect, self.pill_niri_rect, self.pill_devices_rect);
 
         let rect_height = 26.0;
         let fake_width = rect_width - PILL_MARGIN * 2.0; //? Well, it's a bit of a hack, but it works. We reuse the same anomation system of components, but we don't want to add margins in this case. Margins are already added in set_target, so we can just subtract them here.
