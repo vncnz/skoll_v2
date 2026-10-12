@@ -2,6 +2,7 @@
 
 use cairo::{Context, Format, ImageSurface};
 use chrono::Local;
+use pango::Alignment;
 use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
@@ -108,7 +109,7 @@ pub trait PillModuleTrait {
     }
 }
 
-struct PillModuleBase {
+pub struct PillModuleBase {
     cached_layout: Option<pango::Layout>,
     cached_sizes: Option<(f64, f64)>,
     cached_text: Option<String>,
@@ -117,7 +118,7 @@ struct PillModuleBase {
 }
 
 impl PillModuleBase {
-    fn new() -> Self {
+    pub fn new() -> Self {
         PillModuleBase {
             cached_layout: None,
             cached_sizes: None,
@@ -127,7 +128,7 @@ impl PillModuleBase {
         }
     }
 
-    fn with_size(size: (f64, f64)) -> Self {
+    pub fn with_size(size: (f64, f64)) -> Self {
         PillModuleBase {
             cached_layout: None,
             cached_sizes: Some(size),
@@ -141,7 +142,7 @@ impl PillModuleBase {
         self.vertical = v;
     } */
 
-    fn set_layout(
+    pub fn set_layout(
         &mut self,
         layout: pango::Layout,
         sizes: (f64, f64),
@@ -154,39 +155,33 @@ impl PillModuleBase {
         self.cached_color = Some(color);
     }
 
-    fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.cached_layout = None;
         self.cached_sizes = None;
         self.cached_text = None;
         self.cached_color = None;
     }
+    
+    pub fn draw_centered(&self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+        self.draw_aligned(cr, rect_width, rect_height, x, y, Alignment::Center);
+    }
 
-    fn draw_centered(&self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+    pub fn draw_aligned (&self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64, alignment: Alignment) {
         if let (Some(layout), Some(sizes), Some(color)) =
             (&self.cached_layout, &self.cached_sizes, &self.cached_color)
         {
+            let x = match alignment {
+                Alignment::Left => x,
+                Alignment::Center => x + rect_width / 2.0 - sizes.0 / 2.0,
+                Alignment::Right => x + rect_width - sizes.0,
+                _ => x + rect_width / 2.0 - sizes.0 / 2.0,
+            };
             cr.set_source_rgba(color.0, color.1, color.2, color.3);
             cr.move_to(
-                x + rect_width / 2.0 - sizes.0 / 2.0,
+                x,
                 y + rect_height / 2.0 - sizes.1 / 2.0,
             );
             pangocairo::functions::show_layout(cr, layout);
-            /* cr.save().unwrap();
-            if self.vertical {
-                let xc = x + rect_width / 2.0;
-                let yc = y + rect_height / 2.0;
-                cr.translate(xc, yc);
-                cr.rotate(std::f64::consts::FRAC_PI_2);
-                cr.move_to(- sizes.0 / 2.0, -sizes.1 / 2.0);
-            } else {
-                let xc = x + rect_width / 2.0 - sizes.0 / 2.0;
-                let yc = y + rect_height / 2.0 - sizes.1 / 2.0;
-                cr.move_to(xc, yc);
-            }
-            pangocairo::functions::show_layout(cr, layout);
-            cr.restore().unwrap(); */
-
-            // dbg_println!("Pill drawn in rect {sizes:?}");
         } else {
             // dbg_println!("Pill drawn in rect (0.0, 0.0)");
         }

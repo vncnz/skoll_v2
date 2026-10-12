@@ -16,6 +16,8 @@ use colored::Colorize;
 
 use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, pills::{Pill, PillModuleTrait}, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
+use crate::launcher_ui::Launcher;
+
 static mut AVG_DUR: u128 = 0;
 static mut AVG_CNT: i64 = 0;
 
@@ -68,6 +70,7 @@ pub struct SkollLayer {
     pub(crate) layer_visible: bool,
     pub(crate) keyboard: Option<wl_keyboard::WlKeyboard>,
     pub(crate) keyboard_focus: bool,
+    pub(crate) launcher: Launcher
 
 }
 
@@ -118,6 +121,7 @@ impl SkollLayer {
             layer_visible: true,
             keyboard: None,
             keyboard_focus: false,
+            launcher: Launcher::new()
         }
     }
 
@@ -242,7 +246,7 @@ impl SkollLayer {
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
         if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
             self.needs_redraw = true;
-            eprintln!("=============== DIRTY PILL ============");
+            // eprintln!("=============== DIRTY PILL ============");
         } else {
             // eprintln!("=============== CLEAN PILL ============");
         }
@@ -340,6 +344,7 @@ impl SkollLayer {
                 let cr = Context::new(&surface).unwrap();
 
                 self.draw_background(cr.clone());
+                self.draw_launcher(&cr);
 
                 // self.draw_myframe(cr.clone());
 
@@ -373,6 +378,15 @@ impl SkollLayer {
             } else {
                 dbg_println!("No available buffer to use");
             }
+        }
+    }
+
+    fn draw_launcher(&mut self, cr: &Context) {
+        if let Some(_layer) = &self.layer {
+            // let (width, height) = layer.current_size();
+            let width = 500.0;
+            let height = 200.0;
+            self.launcher.draw(&self.config, &cr, width as f64, height as f64, 300.0, 300.0);
         }
     }
 
@@ -446,7 +460,7 @@ impl SkollLayer {
         
         // cr.set_fill_rule(cairo::FillRule::EvenOdd);
 
-        cr.set_source_rgba(1.0, 0.0, 0.0, 0.1);
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.6);
         cr.rectangle(0.0, 0.0, w, h);
         cr.fill().unwrap();
 
