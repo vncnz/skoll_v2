@@ -1,8 +1,9 @@
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
+    compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_registry, delegate_seat, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, seat::{Capability, SeatHandler, SeatState, keyboard::{KeyEvent, KeyboardHandler, Modifiers}}, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
 };
-use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_region, wl_shm}};
+use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_keyboard, wl_region, wl_seat, wl_shm}};
 use cairo::{Context, Format, ImageSurface};
+use xkbcommon::xkb::keysyms;
 
 use std::{num::NonZeroU32, time::{Duration, Instant}};
 
@@ -37,6 +38,7 @@ impl LayerCommand {
 pub struct SkollLayer {
     pub(crate) registry_state: RegistryState,
     pub(crate) output_state: OutputState,
+    pub(crate) seat_state: SeatState,
     pub(crate) shm: Shm,
     pub(crate) pool: Option<SlotPool>,
     pub(crate) layer: Option<LayerSurface>,
@@ -64,13 +66,20 @@ pub struct SkollLayer {
     pub pill_container: Pill,
     pub(crate) pills_are_animating: bool,
     pub(crate) layer_visible: bool,
+    pub(crate) keyboard: Option<wl_keyboard::WlKeyboard>,
+    pub(crate) keyboard_focus: bool,
 
+}
+
+fn is_escape_key(keysym: u32) -> bool {
+    keysym == keysyms::KEY_Escape || keysym == 0xFF1B
 }
 
 impl SkollLayer {
     pub fn new (
         registry_state: RegistryState,
         output_state: OutputState,
+        seat_state: SeatState,
         shm: Shm,
         config: Config
     ) -> Self {
@@ -79,6 +88,7 @@ impl SkollLayer {
         SkollLayer {
             registry_state,
             output_state,
+            seat_state,
             shm,
             pool: None,
             layer: None,
@@ -106,6 +116,8 @@ impl SkollLayer {
             pill_container: pill,
             pills_are_animating: false,
             layer_visible: true,
+            keyboard: None,
+            keyboard_focus: false,
         }
     }
 
@@ -142,7 +154,7 @@ impl SkollLayer {
         let surface = compositor.create_surface(qh);
         let layer = layer_shell.create_layer_surface(qh, surface, Layer::Overlay, Some("skoll"), chosen_output.as_ref());
         layer.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
-        layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+        layer.set_keyboard_interactivity(KeyboardInteractivity::OnDemand);
 
         let empty_region: wl_region::WlRegion = raw_compositor.create_region(qh, ());
         layer.wl_surface().set_input_region(Some(&empty_region));
@@ -151,6 +163,7 @@ impl SkollLayer {
 
         self.layer = Some(layer);
         self.layer_visible = true;
+        self.keyboard_focus = false;
         self.width = 1;
         self.height = 1;
         self.pool = None;
@@ -166,6 +179,11 @@ impl SkollLayer {
     pub fn close_layer(&mut self) {
         if let Some(layer) = self.layer.take() {
             layer.wl_surface().destroy();
+        }
+
+        self.keyboard_focus = false;
+        if let Some(keyboard) = self.keyboard.take() {
+            keyboard.release();
         }
 
         self.layer_visible = false;
@@ -627,17 +645,124 @@ impl ShmHandler for SkollLayer {
 delegate_compositor!(SkollLayer);
 delegate_output!(SkollLayer);
 delegate_shm!(SkollLayer);
+delegate_seat!(SkollLayer);
+delegate_keyboard!(SkollLayer);
 delegate_layer!(SkollLayer);
 delegate_registry!(SkollLayer);
 
 impl ProvidesRegistryState for SkollLayer {
     fn registry(&mut self) -> &mut RegistryState { &mut self.registry_state }
-    registry_handlers![OutputState];
+    registry_handlers![OutputState, SeatState];
+}
+
+impl SeatHandler for SkollLayer {
+    fn seat_state(&mut self) -> &mut SeatState { &mut self.seat_state }
+
+    fn new_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
+
+    fn new_capability(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        seat: wl_seat::WlSeat,
+        capability: Capability,
+    ) {
+        if capability == Capability::Keyboard && self.keyboard.is_none() {
+            self.keyboard = Some(
+                self.seat_state
+                    .get_keyboard(qh, &seat, None)
+                    .expect("Failed to create keyboard"),
+            );
+        }
+    }
+
+    fn remove_capability(
+        &mut self,
+        _conn: &Connection,
+        _: &QueueHandle<Self>,
+        _: wl_seat::WlSeat,
+        capability: Capability,
+    ) {
+        if capability == Capability::Keyboard {
+            if let Some(keyboard) = self.keyboard.take() {
+                keyboard.release();
+            }
+            self.keyboard_focus = false;
+        }
+    }
+
+    fn remove_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
+}
+
+impl KeyboardHandler for SkollLayer {
+    fn enter(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        surface: &wayland_client::protocol::wl_surface::WlSurface,
+        _: u32,
+        _: &[u32],
+        _: &[xkbcommon::xkb::Keysym],
+    ) {
+        if self.layer.as_ref().is_some_and(|layer| layer.wl_surface() == surface) {
+            self.keyboard_focus = true;
+        }
+    }
+
+    fn leave(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        surface: &wayland_client::protocol::wl_surface::WlSurface,
+        _: u32,
+    ) {
+        if self.layer.as_ref().is_some_and(|layer| layer.wl_surface() == surface) {
+            self.keyboard_focus = false;
+        }
+    }
+
+    fn press_key(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        _: u32,
+        event: KeyEvent,
+    ) {
+        if self.keyboard_focus && is_escape_key(u32::from(event.keysym)) {
+            eprintln!("[skoll] ESC pressed — closing launcher layer");
+            self.close_layer();
+        }
+    }
+
+    fn release_key(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        _: u32,
+        _: KeyEvent,
+    ) {
+    }
+
+    fn update_modifiers(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_keyboard::WlKeyboard,
+        _: u32,
+        _: Modifiers,
+        _: u32,
+    ) {
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::LayerCommand;
+    use super::{LayerCommand, is_escape_key};
+    use xkbcommon::xkb::keysyms;
 
     #[test]
     fn layer_command_names_are_normalized() {
@@ -646,6 +771,13 @@ mod tests {
         assert_eq!(LayerCommand::from_input("closed"), Some(LayerCommand::Close));
         assert_eq!(LayerCommand::from_input("hide"), Some(LayerCommand::Close));
         assert_eq!(LayerCommand::from_input("timer 10"), None);
+    }
+
+    #[test]
+    fn escape_keysyms_are_detected() {
+        assert!(is_escape_key(keysyms::KEY_Escape));
+        assert!(is_escape_key(0xFF1B));
+        assert!(!is_escape_key(keysyms::KEY_Return));
     }
 }
 

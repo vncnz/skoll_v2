@@ -2,7 +2,7 @@ use signal_hook::{consts::{SIGHUP, SIGINT, SIGPIPE, SIGTERM}, iterator::Signals,
 
 use serde::Deserialize;
 use smithay_client_toolkit::{
-    compositor::CompositorState, output::OutputState, registry::RegistryState, shell::wlr_layer::LayerShell, shm::Shm
+    compositor::CompositorState, output::OutputState, registry::RegistryState, seat::SeatState, shell::wlr_layer::LayerShell, shm::Shm
 };
 use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput}};
 
@@ -140,6 +140,7 @@ fn main() {
     let mut app = SkollLayer::new(
         RegistryState::new(&globals),
         OutputState::new(&globals, &qh),
+        SeatState::new(&globals, &qh),
         Shm::bind(&globals, &qh).unwrap(),
         config.clone()
     );
