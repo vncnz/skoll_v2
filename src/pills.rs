@@ -693,10 +693,6 @@ pub struct PillNotificationFull {
     appname_base: PillModuleBase,
     body_base: PillModuleBase,
     animation: AnimationState,
-    // display-only notification manager
-    queue: Vec<crate::notifications::Notification>,
-    stack: Vec<crate::notifications::Notification>,
-    current: Option<crate::notifications::Notification>,
     current_expire: Option<Instant>,
     display_timeout: Duration,
 }
@@ -722,215 +718,6 @@ impl PillModuleTrait for PillNotificationFull {
     }
 }
 
-impl PillNotificationFull {
-    pub fn new() -> Self {
-        PillNotificationFull {
-            appname_base: PillModuleBase::new(),
-            body_base: PillModuleBase::new(),
-            animation: AnimationState::new(),
-            queue: Vec::new(),
-            stack: Vec::new(),
-            current: None,
-            current_expire: None,
-            display_timeout: Duration::from_secs(3),
-        }
-    }
-
-    pub fn update_data(&mut self, cr: &cairo::Context, new_notif: Option<crate::notifications::Notification>) -> bool {
-        // let new_notif = notifications.first().cloned();
-        // let changed = self.last_notification != new_notif;
-        /* if changed {
-            self.last_notification = new_notif;
-            // eprintln!("{} last_notification: {:?}", "PillContainer update_data_notifications".red(), self.last_notification);
-            /* match self.last_notification {
-                None => { self.mode = PillMode::Normal; }
-                Some(_) => { self.mode = PillMode::Notification; }
-            } */
-        } */
-
-        let target = if let Some(notif) = new_notif {
-
-            let white = (1.0, 1.0, 1.0, 1.0);
-
-            let (appname_layout, appname_sizes) = cr_text_layout(&cr, &notif.app_name, PILL_FONT_SIZE - 3.0, Some(500.0)).unwrap();
-
-            let target = (appname_sizes.0, appname_sizes.1);
-            
-            self.appname_base.set_layout(appname_layout, target, notif.app_name.to_string(), white);
-            
-            
-            // let datetime = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-            // let (datetime_layout, datetime_sizes) = cr_text_layout(&cr, &datetime, PILL_FONT_SIZE, Some(500.0)).unwrap();
-
-            
-            // let text: &str = "EXAMPLE NOTIFICATION VERY LONG TEXT THAT SHOULD BE BALANCED AND WRAPPED IN THE PILL, BUT IT'S NOT IMPLEMENTED YET. THIS IS JUST A PLACEHOLDER FOR NOW.";
-            let text = if notif.body.is_empty() { notif.summary } else { notif.body };
-
-            let (body_layout, body_sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, Some(500.0)).unwrap();
-            let target = (body_sizes.0, body_sizes.1);
-
-            self.body_base.set_layout(body_layout, target, text.to_string(), white);
-            // dbg_println!("{} {target:?}", "Notification target".blue());
-            (
-                appname_sizes.0.max(body_sizes.0),
-                appname_sizes.1 + body_sizes.1 + 4.0
-            )
-        } else {
-            self.appname_base.clear();
-            self.body_base.clear();
-            // dbg_println!("{} zero", "Notification target".blue());
-            (0.0, 0.0)
-        };
-
-        self.animation.set_target(target)
-    }
-
-    // Push a new notification into the display manager. Returns (visible_changed, needs_recalc)
-    pub fn push_notification(&mut self, cr: &cairo::Context, notif: crate::notifications::Notification) -> (bool, bool) {
-        let mut changed_visible = false;
-        let mut needs_recalc = false;
-
-        if notif.replaces_id > 0 {
-
-            // Replace the currently displayed notification immediately, if need to
-            if self.current.as_ref().is_some_and(|n| n.id == notif.replaces_id) {
-                let _ = self.update_data(cr, Some(notif.clone()));
-                self.current_expire = if notif.urgency == 2 {
-                    None
-                } else {
-                    Some(Instant::now() + self.display_timeout)
-                };
-                self.current = Some(notif);
-                return (true, true);
-            }
-
-            // Replace a queued notification instead of adding a duplicate, if need to
-            if let Some(index) = self.queue.iter().position(|n| n.id == notif.replaces_id) {
-                self.queue.remove(index);
-                self.queue.insert(0, notif);
-                return (false, false);
-            }
-
-            // Replace a critical notification stored in the stack, if need to
-            if let Some(index) = self.stack.iter().position(|n| n.id == notif.replaces_id) {
-                self.stack.remove(index);
-                self.stack.push(notif);
-                return (false, false);
-            }
-        }
-
-        let curr_urg = self.current.as_ref().map(|n| n.urgency);
-
-        match (curr_urg, notif.urgency) {
-            (None, 0..=1) => {
-                // idle, normal -> show
-                let _ = self.update_data(cr, Some(notif.clone()));
-                self.current = Some(notif);
-                self.current_expire = Some(Instant::now() + self.display_timeout);
-                changed_visible = true;
-                needs_recalc = true;
-            }
-            (None, 2) => {
-                // idle, critical -> show without timeout
-                let _ = self.update_data(cr, Some(notif.clone()));
-                self.current = Some(notif);
-                self.current_expire = None;
-                changed_visible = true;
-                needs_recalc = true;
-            }
-            (Some(curr), new) if curr <= 1 && new <= 1 => {
-                // showing normal + normal -> replace and reset timer
-                let _ = self.update_data(cr, Some(notif.clone()));
-                self.current = Some(notif);
-                self.current_expire = Some(Instant::now() + self.display_timeout);
-                changed_visible = true;
-                needs_recalc = true;
-            }
-            (Some(curr), new) if curr <= 1 && new == 2 => {
-                // showing normal + critical -> replace and no timeout
-                let _ = self.update_data(cr, Some(notif.clone()));
-                self.current = Some(notif);
-                self.current_expire = None;
-                changed_visible = true;
-                needs_recalc = true;
-            }
-            (Some(curr), new) if curr == 2 && new == 2 => {
-                // showing critical + critical -> push on stack
-                self.stack.push(notif);
-            }
-            (Some(curr), new) if curr == 2 && new <= 1 => {
-                // showing critical + normal -> ignore new notif
-            }
-            _ => {
-                // fallback: queue it
-                self.queue.insert(0, notif);
-            }
-        }
-
-        (changed_visible, needs_recalc)
-    }
-
-    // Tick expiration/rotation. Returns (visible_changed, needs_recalc)
-    pub fn tick(&mut self, cr: &cairo::Context) -> (bool, bool) {
-        let mut changed = false;
-        let mut needs_recalc = false;
-
-        if let Some(exp) = self.current_expire {
-            if Instant::now() > exp {
-                // current expired
-                changed = true;
-                if let Some(next) = self.queue.pop() {
-                    let _ = self.update_data(cr, Some(next.clone()));
-                    self.current = Some(next);
-                    self.current_expire = Some(Instant::now() + self.display_timeout);
-                    needs_recalc = true;
-                } else if let Some(next) = self.stack.pop() {
-                    let _ = self.update_data(cr, Some(next.clone()));
-                    self.current = Some(next);
-                    self.current_expire = None; // criticals from stack keep no timeout
-                    needs_recalc = true;
-                } else {
-                    // nothing to show
-                    let _ = self.update_data(cr, None);
-                    self.current = None;
-                    self.current_expire = None;
-                    needs_recalc = true;
-                }
-            }
-        }
-
-        (changed, needs_recalc)
-    }
-
-    pub fn dismiss_current(&mut self, cr: &cairo::Context) -> bool {
-        if self.current.is_some() {
-            if let Some(next) = self.queue.pop() {
-                let _ = self.update_data(cr, Some(next.clone()));
-                self.current = Some(next);
-                self.current_expire = Some(Instant::now() + self.display_timeout);
-            } else if let Some(next) = self.stack.pop() {
-                let _ = self.update_data(cr, Some(next.clone()));
-                self.current = Some(next);
-                self.current_expire = None;
-            } else {
-                let _ = self.update_data(cr, None);
-                self.current = None;
-                self.current_expire = None;
-            }
-            return true;
-        }
-        false
-    }
-
-    pub fn current_notification(&self) -> Option<&crate::notifications::Notification> {
-        self.current.as_ref()
-    }
-
-}
-
-
-
-
 
 
 
@@ -954,7 +741,6 @@ enum PillMode {
 
 pub struct Pill {
     mode: PillMode,
-    last_notification: Option<crate::notifications::Notification>,
     animation: AnimationState,
     // dummy_surface: cairo::ImageSurface,
     dummy_context: cairo::Context,
@@ -978,9 +764,6 @@ pub struct Pill {
     pill_niri_rect: (f64, f64),
     pill_countdown_rect: (f64, f64),
     pill_devices_rect: (f64, f64),
-
-    pill_notification_full: PillNotificationFull,
-    // pill_notification_full_rect: (f64, f64)
 }
 
 impl PillModuleTrait for Pill {
@@ -989,10 +772,7 @@ impl PillModuleTrait for Pill {
     }
 
     fn draw(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        match self.mode {
-            PillMode::Normal => self.draw_normal(cr, _rect_width, rect_height, x, y),
-            PillMode::Notification(_) => self.draw_notification(cr, _rect_width, rect_height, x, y)
-        }
+        self.draw_normal(cr, _rect_width, rect_height, x, y);
         self.needs_redraw = false;
     }
 
@@ -1003,7 +783,6 @@ impl PillModuleTrait for Pill {
             animating |= module.step_animation();
         }
 
-        animating |= self.pill_notification_full.step_animation();
         animating
     }
 
@@ -1022,7 +801,6 @@ impl Pill {
         let dummy_context = Context::new(&dummy_surface).unwrap();
         Pill {
             mode: PillMode::Normal,
-            last_notification: None,
             animation: AnimationState::new(),
             // dummy_surface,
             dummy_context,
@@ -1037,7 +815,6 @@ impl Pill {
             pill_niri: PillModuleNiri::new(),
             pill_countdown: PillModuleCountdown::new(),
             pill_devices: PillModuleDevices::new(config.show_devices_battery_max_level),
-            pill_notification_full: PillNotificationFull::new(),    
             pill_clock_rect: (0.0, 0.0),
             pill_battery_rect: (0.0, 0.0),
             pill_warnings_rect: (0.0, 0.0),
@@ -1045,7 +822,6 @@ impl Pill {
             pill_niri_rect: (0.0, 0.0),
             pill_countdown_rect: (0.0, 0.0),
             pill_devices_rect: (0.0, 0.0),
-            // pill_notification_full_rect: (0.0, 0.0)
         }
     }
 
@@ -1126,97 +902,9 @@ impl Pill {
         }
         return changed
     }
-    
-    // Notification management wrappers
-    pub fn push_notification(&mut self, notif: crate::notifications::Notification) -> (bool, bool) {
-        let prev = self.pill_notification_full.current_notification().cloned();
-        let res = self.pill_notification_full.push_notification(&self.dummy_context, notif);
-        let now = self.pill_notification_full.current_notification().cloned();
-        if prev != now {
-            if let Some(n) = now {
-                self.mode = PillMode::Notification(n.urgency);
-                self.animation.set_target(self.pill_notification_full.get_desired_rect());
-            } else {
-                self.mode = PillMode::Normal;
-                self.needs_recalc = true;
-            }
-            self.needs_redraw = true;
-        }
-        res
-    }
-
-    pub fn tick_notifications(&mut self) -> (bool, bool) {
-        let prev = self.pill_notification_full.current_notification().cloned();
-        let res = self.pill_notification_full.tick(&self.dummy_context);
-        let now = self.pill_notification_full.current_notification().cloned();
-        if prev != now {
-            if let Some(n) = now {
-                self.mode = PillMode::Notification(n.urgency);
-                self.animation.set_target(self.pill_notification_full.get_desired_rect());
-            } else {
-                self.mode = PillMode::Normal;
-                self.needs_recalc = true;
-            }
-            self.needs_redraw = true;
-        }
-        res
-    }
-
-    pub fn dismiss_current_notification(&mut self) -> bool {
-        let prev = self.pill_notification_full.current_notification().cloned();
-        let res = self.pill_notification_full.dismiss_current(&self.dummy_context);
-        let now = self.pill_notification_full.current_notification().cloned();
-        if prev != now {
-            if let Some(n) = now {
-                self.mode = PillMode::Notification(n.urgency);
-                self.animation.set_target(self.pill_notification_full.get_desired_rect());
-            } else {
-                self.mode = PillMode::Normal;
-                self.needs_recalc = true;
-            }
-            self.needs_redraw = true;
-        }
-        res
-    }
-    
-    pub fn update_data_notifications(&mut self, notifications: &Vec<crate::notifications::Notification>) -> bool {
-        // eprintln!("{} {}", "Updating notifications vec, len".red(), notifications.len());
-        let new_notif = notifications.first().cloned();
-        let changed = self.last_notification != new_notif;
-        // eprintln!("{} len {} changed {changed}", "Updating notifications vec".red(), notifications.len());
-
-        if changed {
-            let _ = self.pill_notification_full.update_data(&self.dummy_context, new_notif);
-            self.last_notification = notifications.first().cloned();
-
-            if self.last_notification.is_some() {
-                self.mode = PillMode::Notification(self.last_notification.as_ref().unwrap().urgency);
-                self.animation.set_target(self.pill_notification_full.get_desired_rect());
-            } else {
-                self.mode = PillMode::Normal;
-                // self.recalculate_normal_target();
-                // eprintln!("{} len {} changed {changed} needs_recalc true", "Updating notifications vec".red(), notifications.len());
-                self.needs_recalc = true;
-            }
-
-            // eprintln!("{} len {} changed {changed} needs_redraw true", "Updating notifications vec".red(), notifications.len());
-            self.needs_redraw = true;
-        }
-
-        // eprintln!("{} {:?}", "Now last_notification is ".red(), self.last_notification);
-
-        changed
-    }
 
     pub fn get_bg_color(&self) -> (f64, f64, f64, f64) {
-        match self.mode {
-            PillMode::Notification(2) => (0.5, 0.08, 0.08, 0.85), // (0.3, 0.15, 0.2, 0.85),
-            _ => (0.08, 0.08, 0.12, 0.85) // (0.1, 0.1, 0.15, 0.85)
-        }
-    }
-
-    fn draw_notification(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        self.pill_notification_full.draw(&cr, _rect_width, rect_height, x, y);
+        (0.08, 0.08, 0.12, 0.85) // (0.1, 0.1, 0.15, 0.85)
     }
 
     fn draw_normal(&mut self, cr: &Context, _rect_width: f64, rect_height: f64, x: f64, y: f64) {
@@ -1270,14 +958,7 @@ impl Pill {
 
         let rect_height = 26.0;
         let fake_width = rect_width - PILL_MARGIN * 2.0; //? Well, it's a bit of a hack, but it works. We reuse the same anomation system of components, but we don't want to add margins in this case. Margins are already added in set_target, so we can just subtract them here.
-        match self.mode {
-            PillMode::Normal => {
-                self.animation.set_target((fake_width, rect_height));
-            }
-            PillMode::Notification(_) => {
-                // I don't want to change the target when in notification mode, so I cache the value and restore it when switching back to normal mode
-            }
-        }
+        self.animation.set_target((fake_width, rect_height));
     }
 
     fn sync_child_rects_for_draw(&mut self) {

@@ -13,10 +13,26 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, notifications::Notification, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, pills::{Pill, PillModuleTrait}, security::MicCameraStatus, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
 static mut AVG_DUR: u128 = 0;
-static mut AVG_CNT: i64 = -5;
+static mut AVG_CNT: i64 = 0;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayerCommand {
+    Open,
+    Close,
+}
+
+impl LayerCommand {
+    pub fn from_input(cmd: &str) -> Option<Self> {
+        match cmd.trim().to_ascii_lowercase().as_str() {
+            "open" => Some(Self::Open),
+            "close" | "closed" | "hide" => Some(Self::Close),
+            _ => None,
+        }
+    }
+}
 
 pub struct SkollLayer {
     pub(crate) registry_state: RegistryState,
@@ -36,7 +52,6 @@ pub struct SkollLayer {
     pub(crate) buffers: [Option<Buffer>; 2],
     pub(crate) current_buffer_idx: usize,
     pub(crate) config: crate::config::Config,
-    pub(crate) notifications: Vec<crate::notifications::Notification>,
     pub(crate) wob_value: TweenState,
     pub(crate) wob_expiration: Option<Instant>,
     pub(crate) ratatoskr_connected: bool,
@@ -48,7 +63,8 @@ pub struct SkollLayer {
     pub(crate) batteries_pristine: bool,
     // pub(crate) timer: Countdown,
     pub pill_container: Pill,
-    pub(crate) pills_are_animating: bool
+    pub(crate) pills_are_animating: bool,
+    pub(crate) layer_visible: bool,
 
 }
 
@@ -80,8 +96,6 @@ impl SkollLayer {
             buffers: [None, None],
             current_buffer_idx: 0,
             config,
-            notifications: vec![],
-            // notification_idx: 0,
             wob_expiration: None,
             wob_value: TweenState::new(0.0),
             // animator: Animator::new(),
@@ -92,8 +106,37 @@ impl SkollLayer {
             batteries_pristine: false,
             // timer: Countdown::new(),
             pill_container: pill,
-            pills_are_animating: false
+            pills_are_animating: false,
+            layer_visible: true,
         }
+    }
+
+    pub fn set_layer_visibility(&mut self, visible: bool) {
+        if self.layer_visible == visible {
+            return;
+        }
+
+        self.layer_visible = visible;
+
+        if let Some(layer) = self.layer.as_ref() {
+            let (width, height) = if visible {
+                (self.width.max(1), self.height.max(1))
+            } else {
+                (0, 0)
+            };
+            layer.set_size(width, height);
+            layer.commit();
+        }
+
+        self.request_redraw(if visible { "layer opened" } else { "layer closed" });
+    }
+
+    pub fn open_layer(&mut self) {
+        self.set_layer_visibility(true);
+    }
+
+    pub fn close_layer(&mut self) {
+        self.set_layer_visibility(false);
     }
 
     pub fn update_security_data (&mut self, data: MicCameraStatus) {
@@ -143,17 +186,6 @@ impl SkollLayer {
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
-
-        // Update/prune notification history, then tick pill notification state
-        self.update_notification_list(None);
-        let (notif_changed, notif_needs_recalc) = self.pill_container.tick_notifications();
-        if notif_changed {
-            self.request_redraw("notification tick");
-        }
-        if notif_needs_recalc {
-            self.pill_container.recalculate_normal_target();
-        }
-
         if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
             self.needs_redraw = true;
             eprintln!("=============== DIRTY PILL ============");
@@ -443,50 +475,9 @@ impl SkollLayer {
         }
 
     }
-
-    pub fn update_notification_list (&mut self, new_notif_opt: Option<Notification>) -> bool {
-        let mut changed: bool = false;
-        if let Some(new_notif) = new_notif_opt {
-            // Preserve replace/unmount handling in history
-            let mut custom_replace = None;
-            if new_notif.unmounted {
-                let to_be_replaced = self.notifications.iter().find(|x| x.unmounting);
-                if let Some(notif) = to_be_replaced {
-                    custom_replace = Some(notif.id);
-                }
-            }
-            if let Some(rep) = custom_replace {
-                self.notifications.retain(|n| n.id != rep);
-            }
-
-            if new_notif.replaces_id > 0 {
-                self.notifications.retain(|n| n.id != new_notif.replaces_id);
-            }
-
-            // keep a history (most recent first)
-            self.notifications.insert(0, new_notif.clone());
-
-            // forward to pill which handles display rules/timing
-            let (visible_changed, needs_recalc) = self.pill_container.push_notification(new_notif);
-            changed = visible_changed || needs_recalc;
-        }
-
-        // prune expired history entries
-        let a = self.notifications.len();
-        self.notifications.retain(|n| n.expired_at.is_none() || (n.expired_at.unwrap() > Instant::now()));
-        let b = self.notifications.len();
-        changed = changed || (a != b);
-
-        if changed {
-            self.request_redraw("notifications updated");
-        }
-
-        changed
-
-    }
 }
 
-impl SkollLayer { // This is for icon/notifications/stuff management, I like to keep it separated
+impl SkollLayer { // This is for icon/stuff management, I like to keep it separated
     pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
 
         let mut already_present = false;
@@ -531,31 +522,6 @@ impl SkollLayer { // This is for icon/notifications/stuff management, I like to 
         }
         removed
     }
-
-    pub fn remove_notification(&mut self) -> bool {
-        // First attempt to dismiss the currently displayed notification in the pill
-        if self.pill_container.dismiss_current_notification() {
-            self.request_redraw("notification dismissed");
-            return true;
-        }
-
-        // Fallback: remove from history if any
-        // TODO: To be removed?
-        if self.notifications.len() > 0 {
-            self.notifications.remove(0);
-            let _ = self.pill_container.update_data_notifications(&self.notifications);
-            self.request_redraw("notification removed from history");
-            true
-        } else {
-            false
-        }
-    }
-    
-    /* #[deprecated]
-    pub fn show_notification(&mut self, new_idx: i32) -> bool {
-        eprintln!("{} ({new_idx})", "Removed functionality".yellow());
-        false
-    } */
 
     pub fn show_value(&mut self, value: f64, _kind: Option<&str>) -> bool {
         let target = value.clamp(0.0, 1.0);
@@ -622,6 +588,20 @@ delegate_registry!(SkollLayer);
 impl ProvidesRegistryState for SkollLayer {
     fn registry(&mut self) -> &mut RegistryState { &mut self.registry_state }
     registry_handlers![OutputState];
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LayerCommand;
+
+    #[test]
+    fn layer_command_names_are_normalized() {
+        assert_eq!(LayerCommand::from_input("open"), Some(LayerCommand::Open));
+        assert_eq!(LayerCommand::from_input("close"), Some(LayerCommand::Close));
+        assert_eq!(LayerCommand::from_input("closed"), Some(LayerCommand::Close));
+        assert_eq!(LayerCommand::from_input("hide"), Some(LayerCommand::Close));
+        assert_eq!(LayerCommand::from_input("timer 10"), None);
+    }
 }
 
 impl Dispatch<wl_compositor::WlCompositor, ()> for SkollLayer {

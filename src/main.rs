@@ -16,7 +16,7 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, WindowInfo}, notifications::Notification, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, WindowInfo}, security::{MicCameraStatus, start_security_monitor}, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -27,7 +27,6 @@ mod config;
 //mod clock1;
 //mod clock2;
 mod skoll_layer;
-mod notifications;
 mod commands;
 mod niri;
 mod utils;
@@ -40,7 +39,6 @@ use config::Config;
 // use chrono;
 
 use crate::skoll_layer::SkollLayer;
-use crate::notifications::start_notification_listener;
 use crate::battery::start_battery_listener;
 use crate::niri::start_niri_listener;
 
@@ -190,21 +188,6 @@ fn main() {
 
     let mut sock = RatatoskrSocket::new("/tmp/ratatoskr.sock");
 
-    let (tx, rx_notif): (Sender<Notification>, Receiver<Notification>) = mpsc::channel();
-    // let rx_notif: Option<Receiver<Notification>> = None;
-    
-    thread::spawn(|| {
-        futures::executor::block_on(async {
-            if let Err(e) = start_notification_listener(tx).await {
-                log_to_file(format!("Notification listener error: {:?}", e));
-                let msg = format!("Notification listener error: {:?}", e).red().to_string();
-                dbg_println!("{}", msg);
-            } else {
-                dbg_println!("{}", "Notification listener OK".green().to_string());
-            }
-        });
-    });
-
     let (tx_battery, rx_battery): (Sender<BatteryStats>, Receiver<BatteryStats>) = mpsc::channel();
     thread::spawn(|| {
         start_battery_listener(tx_battery);
@@ -253,8 +236,7 @@ fn main() {
                 ("wob", "0.55", Duration::from_millis(300)),
                 ("wob", "0.65", Duration::from_millis(200)),
                 ("timer", "3s", Duration::from_secs(3)),
-                ("timer", "off", Duration::from_secs(6)),
-                ("notification", "The endless noise will put a lock on your open mind, and it will tear your soul apart. Run away from the tragedy, and find the essence of silence that remains inside.", Duration::from_secs(2)) */
+                ("timer", "off", Duration::from_secs(6)) */
             ];
 
             for (kind, value, delay) in actions {
@@ -311,25 +293,6 @@ fn main() {
                     } else {
                         eprintln!("Invalid wob value: {}", val);
                     }
-                },
-                ("notification", text) => {
-                    let notif = Notification {
-                        app_name: "Demo notification".to_string(),
-                        summary: "Demo notification".to_string(),
-                        body: text.to_string(),
-                        urgency: 1,
-                        received_at: std::time::Instant::now(),
-                        expired_at: Some(std::time::Instant::now() + Duration::from_secs(3)),
-                        app_icon: "dialog-information".to_string(),
-                        id: 0,
-                        replaces_id: 0,
-                        unmounting: false,
-                        unmounted: false,
-                        reboot: false,
-                        datetime: chrono::Local::now()
-                    };
-                    let _ = app.update_notification_list(Some(notif));
-                    app.request_redraw("demo notification");
                 },
                 ("battery", charging_str) => {
                     if let Ok(charging) = charging_str.parse::<bool>() {
@@ -428,80 +391,69 @@ fn main() {
         } */
 
         if let Ok(cmd) = rx_cmds.try_recv() {
-            match &*cmd {
-                "hide_notification" => {
-                    println!("hide!");
-                    if app.remove_notification() {
-                        app.request_redraw("hide_notification");
-                    } else {
-                        eprintln!("--- No remove?");
-                    }
-                },
-                "focus_next_urgent_window" => {
-                    match handle_niri_command("focus_next_urgent_window") {
-                        Ok(()) => {
-                            println!("Focused next urgent Niri window");
-                        },
-                        Err(err) => {
-                            eprintln!("{}", err.red());
+            if let Some(layer_cmd) = crate::skoll_layer::LayerCommand::from_input(&cmd) {
+                match layer_cmd {
+                    crate::skoll_layer::LayerCommand::Open => app.open_layer(),
+                    crate::skoll_layer::LayerCommand::Close => app.close_layer(),
+                }
+            } else {
+                match &*cmd {
+                    "focus_next_urgent_window" => {
+                        match handle_niri_command("focus_next_urgent_window") {
+                            Ok(()) => {
+                                println!("Focused next urgent Niri window");
+                            },
+                            Err(err) => {
+                                eprintln!("{}", err.red());
+                            }
                         }
-                    }
-                },
-                /* "prev_notification" => {
-                    if app.show_notification(-1) {
-                        app.request_redraw("prev_notification");
-                    }
-                }, */
-                /* "next_notification" => {
-                    if app.show_notification(1) {
-                        app.request_redraw("next_notification");
-                    }
-                }, */
-                _ => {
-                    println!("cmd to be parsed: {}", cmd);
-                    let parts: Vec<&str> = cmd.split(" ").collect();
-                    match parts.as_slice() {
-                        ["timer", value_str] => {
-                            match app.set_countdown(value_str) {
-                                Ok(secs) => {
-                                    if secs > 0 {
-                                        // app.update_timer_icon();
-                                    } else {
-                                        app.remove_icon("timer");
+                    },
+                    _ => {
+                        println!("cmd to be parsed: {}", cmd);
+                        let parts: Vec<&str> = cmd.split(" ").collect();
+                        match parts.as_slice() {
+                            ["timer", value_str] => {
+                                match app.set_countdown(value_str) {
+                                    Ok(secs) => {
+                                        if secs > 0 {
+                                            // app.update_timer_icon();
+                                        } else {
+                                            app.remove_icon("timer");
+                                        }
+                                        app.request_redraw("timer set");
+                                        eprintln!("Timer set to {} seconds", secs);
+                                    },
+                                    Err(err) => {
+                                        eprintln!("Error setting timer: {err}");
                                     }
-                                    app.request_redraw("timer set");
-                                    eprintln!("Timer set to {} seconds", secs);
-                                },
-                                Err(err) => {
-                                    eprintln!("Error setting timer: {err}");
+                                }
+                                /* match value_str.parse::<f64>() {
+                                    Ok(value) => { eprintln!("Timer set to {} seconds", value); true },
+                                    Err(_) => { eprintln!("Invalid number: {}", value_str); false }
+                                } */
+                            }
+                            
+                            [kind, value_str] => {
+                                match value_str.parse::<f64>() {
+                                    Ok(value) => { app.show_value(value, Some(*kind)); },
+                                    Err(_) => { eprintln!("Invalid number: {}", value_str); }
                                 }
                             }
-                            /* match value_str.parse::<f64>() {
-                                Ok(value) => { eprintln!("Timer set to {} seconds", value); true },
-                                Err(_) => { eprintln!("Invalid number: {}", value_str); false }
-                            } */
-                        }
-                        
-                        [kind, value_str] => {
-                            match value_str.parse::<f64>() {
-                                Ok(value) => { app.show_value(value, Some(*kind)); },
-                                Err(_) => { eprintln!("Invalid number: {}", value_str); }
-                            }
-                        }
 
-                        [value_str] => {
-                            match value_str.parse::<f64>() {
-                                Ok(value) => { app.show_value(value, None); },
-                                Err(_) => { eprintln!("Invalid number: {}", value_str); }
+                            [value_str] => {
+                                match value_str.parse::<f64>() {
+                                    Ok(value) => { app.show_value(value, None); },
+                                    Err(_) => { eprintln!("Invalid number: {}", value_str); }
+                                }
                             }
-                        }
 
-                        _ => {
-                            eprintln!("Unknown command");
-                        }
-                    };
-                }
-            };
+                            _ => {
+                                eprintln!("Unknown command");
+                            }
+                        };
+                    }
+                };
+            }
             // app.request_redraw();
         }
         
@@ -635,15 +587,6 @@ fn main() {
                     }
                 }
             }
-        }
-
-        if let Ok(new_notif) = rx_notif.try_recv() {
-            println!("{:?}", new_notif);
-            if new_notif.reboot {
-                app.add_icon("reboot", "󱄋", get_color_gradient(1.0), 1.0, None);
-            }
-            app.update_notification_list(Some(new_notif));
-            app.request_redraw("notifications updated");
         }
 
         app.check_redraw_timeout();
