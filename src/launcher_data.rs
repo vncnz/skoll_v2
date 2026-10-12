@@ -1,5 +1,16 @@
-use std::path::PathBuf;
+use std::{eprintln, path::PathBuf};
+use std::error::Error;
+use chrono::{DateTime, Duration, Utc};
+use fuzzy_matcher::skim::SkimMatcherV2;
+use serde::{Deserialize, Serialize};
+use strsim::damerau_levenshtein;
+use std::fs;
+use std::collections::HashMap;
 
+use crate::log_to_file;
+use fuzzy_matcher::FuzzyMatcher;
+
+#[derive(Debug, Clone)]
 pub struct AppEntry {
     pub name: String,
     pub exec: String,
@@ -32,4 +43,164 @@ pub fn get_sample () -> Vec<AppEntry> {
             terminal: false
         }
     ])
+}
+
+
+use freedesktop_desktop_entry::{default_paths, get_languages_from_env, Iter};
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LaunchStats {
+    pub total_launches: u64,
+    pub launches: Vec<String>,
+}
+
+pub type LaunchHistory = HashMap<String, LaunchStats>;
+
+fn app_key(app: &AppEntry) -> String {
+    format!("{}::{}", app.exec, app.name)
+}
+
+pub fn record_app_launch(app: &AppEntry, history: &mut LaunchHistory, at: DateTime<Utc>) {
+    let key = app_key(app);
+    let stats = history.entry(key).or_default();
+    stats.total_launches += 1;
+    stats.launches.push(at.to_rfc3339());
+}
+
+pub fn prune_launch_history(history: &mut LaunchHistory, max_age: Duration) {
+    let cutoff = Utc::now() - max_age;
+    for stats in history.values_mut() {
+        stats.launches.retain(|ts| {
+            DateTime::parse_from_rfc3339(ts).ok().map(|parsed| parsed.with_timezone(&Utc) >= cutoff).unwrap_or(false)
+        });
+        stats.total_launches = stats.launches.len() as u64;
+    }
+    history.retain(|_, stats| !stats.launches.is_empty());
+}
+
+pub fn sort_app_entries_by_launch_history(
+    entries: &[AppEntry],
+    history: &LaunchHistory,
+    recent_window_days: i64,
+) -> Vec<AppEntry> {
+    let cutoff = Utc::now() - Duration::days(recent_window_days);
+    let mut ranked: Vec<(f64, AppEntry)> = entries
+        .iter()
+        .cloned()
+        .map(|entry| {
+            let key = app_key(&entry);
+            let stats = history.get(&key).cloned().unwrap_or_default();
+            let recent_hits = stats
+                .launches
+                .iter()
+                .filter(|ts| {
+                    DateTime::parse_from_rfc3339(ts).ok().map(|parsed| parsed.with_timezone(&Utc) >= cutoff).unwrap_or(false)
+                })
+                .count() as f64;
+            let score = recent_hits * 10.0 + stats.total_launches as f64;
+            (score, entry)
+        })
+        .collect();
+
+    ranked.sort_by(|left, right| {
+        right.0.partial_cmp(&left.0).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    ranked.into_iter().map(|(_, entry)| entry).collect()
+}
+
+pub fn save_launch_history(history: &LaunchHistory, path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let temp = path.with_extension("json.tmp");
+    let data = serde_json::to_string_pretty(history)?;
+    fs::write(&temp, data)?;
+    fs::rename(temp, path)?;
+    Ok(())
+}
+
+pub fn load_launch_history(path: &PathBuf) -> Result<LaunchHistory, Box<dyn Error>> {
+    if !path.exists() {
+        return Ok(LaunchHistory::new());
+    }
+    let data = fs::read_to_string(path)?;
+    if data.trim().is_empty() {
+        return Ok(LaunchHistory::new());
+    }
+    Ok(serde_json::from_str(&data)?)
+}
+
+pub fn load_app_entries() -> Result<Vec<AppEntry>, Box<dyn Error>> {
+
+    let mut results = vec![];
+    let locales = get_languages_from_env();
+
+    let entries = Iter::new(default_paths())
+        .entries(Some(&locales))
+        .collect::<Vec<_>>();
+    
+    for entry in entries {
+        // let path_src = PathSource::guess_from(&entry.path);
+        // println!("{:?}: {}\n---\n{}", path_src, entry.path.display(), entry);
+        if (&entry).no_display() == false {
+            results.push(AppEntry {
+                exec: (&entry).exec().unwrap_or_default().to_string(),
+                name: (&entry).name(&vec!["en"]).as_ref().unwrap().to_string(),
+                icon_path: resolve_icon_path((&entry).icon().unwrap_or_default().to_string()),
+                comment: (&entry).comment(&vec!["en"]).unwrap_or_default().to_string(),
+                terminal: (&entry).terminal()
+            });
+        }
+    }
+
+    Ok(results)
+}
+
+fn resolve_icon_path(icon_name: String) -> Option<PathBuf> {
+    let candidates = vec![
+        format!("/usr/share/icons/hicolor/48x48/apps/{}.png", icon_name),
+        format!("/usr/share/pixmaps/{}.png", icon_name)
+    ];
+
+    candidates.into_iter().map(PathBuf::from).find(|p| p.exists())
+}
+
+pub fn get_apps (filter: String) -> Vec<AppEntry> {
+    // TODO: Stuff to be cached...
+
+    let mut apps_entries: Vec<AppEntry> = vec![];
+    let uri = if let Ok(path) = std::env::var("XDG_STATE_HOME") { path } else { shellexpand::tilde("~/.local/state/fenrir/history.json").to_string() };
+    log_to_file(format!("History path {uri}"));
+    let history_path = PathBuf::from(uri); // "/tmp/fenrir-launch-history.json");
+    let mut launch_history: LaunchHistory = load_launch_history(&history_path).unwrap_or_default();
+    let matcher = SkimMatcherV2::default();
+
+
+    let filtered: Vec<_> = {
+        let q = filter.to_lowercase();
+        let sorted = sort_app_entries_by_launch_history(&apps_entries, &launch_history, 30);
+        if q.is_empty() {
+            sorted.into_iter().collect()
+        } else {
+            let mut exact: Vec<AppEntry> = Vec::new();
+            let mut fuzzy: Vec<AppEntry> = Vec::new();
+            for app in sorted.into_iter() {
+                let name = app.name.to_lowercase();
+                if name.starts_with(&q) {
+                    exact.push(app);
+                    continue;
+                }
+                if matcher.fuzzy_match(&name, &q).is_some()
+                    || name.split_whitespace().any(|tok| damerau_levenshtein(tok, &q) <= 2)
+                {
+                    fuzzy.push(app);
+                }
+            }
+            exact.extend(fuzzy);
+            exact
+        }
+    };
+    eprintln!("\n\nFiltered {} apps with query '{}'\n\n", filtered.len(), filter);
+    filtered
 }

@@ -1,6 +1,6 @@
 use cairo::Context;
 
-use crate::{config::Config, launcher_data::{AppEntry, get_sample}, pills::PillModuleBase, utils::cr_text_layout};
+use crate::{config::Config, launcher_data::{AppEntry, get_apps, get_sample}, pills::PillModuleBase, utils::cr_text_layout};
 
 
 pub enum LauncherMode {
@@ -26,9 +26,14 @@ impl Launcher {
             mode: LauncherMode::Search,
             base: PillModuleBase::new(),
             query: "fire".into(),
-            results: get_sample(),
+            results: get_apps("f".into()), // get_sample(),
             results_index: 0
         }
+    }
+
+    pub fn refresh_results (&mut self) {
+        self.results = get_apps(self.query.clone());
+        self.results_index = 0;
     }
 
     pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {

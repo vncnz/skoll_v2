@@ -178,7 +178,7 @@ fn main() {
 
     let (tx_battery, rx_battery): (Sender<BatteryStats>, Receiver<BatteryStats>) = mpsc::channel();
     thread::spawn(|| {
-        start_battery_listener(tx_battery);
+        // start_battery_listener(tx_battery); // TODO: enable or remove?
         dbg_println!("{}", "Battery listener OK".green().to_string());
     });
 

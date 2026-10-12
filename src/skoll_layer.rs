@@ -154,6 +154,8 @@ impl SkollLayer {
             return;
         }
 
+        self.launcher.refresh_results();
+
         let chosen_output = self.choose_output();
         let surface = compositor.create_surface(qh);
         let layer = layer_shell.create_layer_surface(qh, surface, Layer::Overlay, Some("skoll"), chosen_output.as_ref());
@@ -460,7 +462,7 @@ impl SkollLayer {
         
         // cr.set_fill_rule(cairo::FillRule::EvenOdd);
 
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.6);
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.75);
         cr.rectangle(0.0, 0.0, w, h);
         cr.fill().unwrap();
 
