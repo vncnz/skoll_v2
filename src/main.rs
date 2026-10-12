@@ -195,10 +195,10 @@ fn main() {
     let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
 
 
-    if false {
+    if true {
         thread::spawn(move || {
             let actions = vec![
-                ("devices", "0.0", Duration::from_secs(2))
+                ("open", "", Duration::from_secs(1))
                 // ("warning-ram", "0.9", Duration::from_secs(1)),
                 //("warning-load", "0.6", Duration::from_secs(1)),
                 //("warning-disk", "0.31", Duration::from_secs(1))
@@ -249,6 +249,12 @@ fn main() {
         // Dispatch demo events
         if let Ok((kind, value)) = demo_rx.try_recv() {
             match (kind.as_str(), value.as_str()) {
+                ("open", _) => {
+                    app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
+                },
+                ("close", _) => {
+                    app.close_layer();
+                },
                 ("timer", time) => {
                     app.set_countdown(&time).ok();
                     app.request_redraw("demo timer");

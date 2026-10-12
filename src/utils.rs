@@ -271,7 +271,7 @@ impl FrameModel {
     }
 } */
 
-/* pub fn cr_text_aligned (cr: Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
+pub fn cr_text_aligned (cr: &Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
     // if v != 0.0 || h != 0.0 {
         let mut x1 = x;
         let mut y1 = y;
@@ -283,7 +283,7 @@ impl FrameModel {
     // }
     cr.show_text(&text).ok();
     (extents.width(), extents.height())
-} */
+}
 
 use cairo::Error;
 

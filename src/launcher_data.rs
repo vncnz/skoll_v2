@@ -170,6 +170,10 @@ pub fn get_apps (filter: String) -> Vec<AppEntry> {
     // TODO: Stuff to be cached...
 
     let mut apps_entries: Vec<AppEntry> = vec![];
+    if apps_entries.len() == 0 {
+        apps_entries = load_app_entries().unwrap_or_default();
+    }
+
     let uri = if let Ok(path) = std::env::var("XDG_STATE_HOME") { path } else { shellexpand::tilde("~/.local/state/fenrir/history.json").to_string() };
     log_to_file(format!("History path {uri}"));
     let history_path = PathBuf::from(uri); // "/tmp/fenrir-launch-history.json");
@@ -201,6 +205,6 @@ pub fn get_apps (filter: String) -> Vec<AppEntry> {
             exact
         }
     };
-    eprintln!("\n\nFiltered {} apps with query '{}'\n\n", filtered.len(), filter);
+    // eprintln!("\n\nFiltered {} apps with query '{}'\n\n", filtered.len(), filter);
     filtered
 }

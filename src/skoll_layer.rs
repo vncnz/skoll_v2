@@ -65,7 +65,7 @@ pub struct SkollLayer {
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
     // pub(crate) timer: Countdown,
-    pub pill_container: Pill,
+    // pub pill_container: Pill,
     pub(crate) pills_are_animating: bool,
     pub(crate) layer_visible: bool,
     pub(crate) keyboard: Option<wl_keyboard::WlKeyboard>,
@@ -116,7 +116,7 @@ impl SkollLayer {
             batteries: vec![],
             batteries_pristine: false,
             // timer: Countdown::new(),
-            pill_container: pill,
+            // pill_container: pill,
             pills_are_animating: false,
             layer_visible: true,
             keyboard: None,
@@ -205,39 +205,39 @@ impl SkollLayer {
     }
 
     pub fn update_niri_data (&mut self, data: Vec<WindowInfo>) {
-        if self.pill_container.update_data_niri(data) {
+        /*if self.pill_container.update_data_niri(data) {
             // self.pill_container.recalculate_normal_target();
             // self.request_redraw("pill_container animation (niri)");
-        }
+        }*/
     }
 
     pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
-        // self.battery_integrated = data;
-        if self.pill_container.update_data_battery(data, self.config.show_watts) {
+        /*if self.pill_container.update_data_battery(data, self.config.show_watts) {
             self.pill_container.recalculate_normal_target();
             self.request_redraw("pill_container animation");
-        }
+        }*/
     }
 
     pub fn update_devices_data (&mut self, data: Vec<BatteryDevice>) {
-        self.batteries = data;
+        /*self.batteries = data;
         self.batteries_pristine = true;
-        let _ = self.pill_container.update_data_devices(self.batteries.clone());
+        let _ = self.pill_container.update_data_devices(self.batteries.clone());*/
     }
 
     pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
-        self.pill_container.set_countdown(input)
+        // self.pill_container.set_countdown(input)
+        Ok(0)
     }
 
     pub fn check_redraw_timeout(&mut self) {
 
         // if self.pill_container.is_countdown_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
-        if self.pill_container.update_data_countdown() {
+        /*if self.pill_container.update_data_countdown() {
             self.request_redraw("timer tick");
         // } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
         } else if self.pill_container.update_data_clock() {
             self.request_redraw("time");
-        }
+        }*/
     }
     
     pub fn request_redraw(&mut self, _reason: &str) {
@@ -246,20 +246,26 @@ impl SkollLayer {
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
-        if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
+        if self.launcher.needs_recalc {
+            self.launcher.recalc();
+        }
+        if self.launcher.needs_redraw {
+            self.needs_redraw = true;
+        }
+        /*if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
             self.needs_redraw = true;
             // eprintln!("=============== DIRTY PILL ============");
         } else {
             // eprintln!("=============== CLEAN PILL ============");
-        }
+        }*/
 
         // Check if wob-like must be closed
-        if let Some(exp) = self.wob_expiration {
+        /*if let Some(exp) = self.wob_expiration {
             if Instant::now() > exp {
                 self.wob_value.set_target(0.0);
                 self.wob_expiration = None;
             }
-        }
+        }*/
 
         let animating = self.wob_value.step() || self.pills_are_animating;
         if !animating { // Now, we skip calling draw only if we are not animating something
@@ -275,7 +281,6 @@ impl SkollLayer {
 
         self.needs_redraw = false;
 
-        // qui fai il rendering vero e proprio:
         self.draw(qh);
     }
 
@@ -395,7 +400,7 @@ impl SkollLayer {
     fn draw_test_pill (&mut self, cr: &Context) {
         self.pills_are_animating = false;
 
-        if self.pill_container.needs_recalc {
+        /*if self.pill_container.needs_recalc {
             dbg_println!("===============   RECALC   ============");
             self.pill_container.recalculate_normal_target();
         }
@@ -445,7 +450,7 @@ impl SkollLayer {
 
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
-        self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);
+        self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);*/
     }
 
     fn draw_background(&mut self, cr: Context) {
@@ -567,7 +572,7 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
                 info
             },
         );
-        if already_present {
+        /*if already_present {
             if self.pill_container.update_data_warnings(&self.icons) {
                 // self.pill_container.recalculate_normal_target();
                 // self.request_redraw("pill_container animation");
@@ -579,17 +584,17 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
                 // self.request_redraw("pill_container animation");
             }
             IconChange::Added
-        }
+        }*/IconChange::None
     }
 
     pub fn remove_icon(&mut self, id: &str) -> bool {
         let removed = self.icons.remove(id).is_some();
-        if removed {
+        /*if removed {
             if self.pill_container.update_data_warnings(&self.icons) {
                 // self.pill_container.recalculate_normal_target();
                 // self.request_redraw("pill_container animation");
             }
-        }
+        }*/
         removed
     }
 
@@ -747,9 +752,13 @@ impl KeyboardHandler for SkollLayer {
         _: u32,
         event: KeyEvent,
     ) {
-        if self.keyboard_focus && is_escape_key(u32::from(event.keysym)) {
-            eprintln!("[skoll] ESC pressed — closing launcher layer");
-            self.close_layer();
+        if self.keyboard_focus {
+            if is_escape_key(u32::from(event.keysym)) {
+                eprintln!("[skoll] ESC pressed — closing launcher layer");
+                self.close_layer();
+            } else if let Some(c) = event.keysym.key_char() {
+                self.launcher.handle_key_char(c);
+            }
         }
     }
 
