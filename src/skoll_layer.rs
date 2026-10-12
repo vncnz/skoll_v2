@@ -1,5 +1,5 @@
 use smithay_client_toolkit::{
-    compositor::CompositorHandler, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
+    compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_layer, delegate_output, delegate_registry, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
 };
 use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_region, wl_shm}};
 use cairo::{Context, Format, ImageSurface};
@@ -109,32 +109,75 @@ impl SkollLayer {
         }
     }
 
-    pub fn set_layer_visibility(&mut self, visible: bool) {
-        if self.layer_visible == visible {
+    fn choose_output(&self) -> Option<wayland_client::protocol::wl_output::WlOutput> {
+        let mut chosen_output = None;
+        for output in self.output_state.outputs() {
+            if let Some(info) = self.output_state.info(&output) {
+                if let Some(name) = info.name {
+                    if name.starts_with("eDP") {
+                        chosen_output = Some(output.clone());
+                        break;
+                    }
+                }
+            }
+            if chosen_output.is_none() {
+                chosen_output = Some(output.clone());
+            }
+        }
+        chosen_output
+    }
+
+    pub fn open_layer(
+        &mut self,
+        qh: &QueueHandle<Self>,
+        compositor: &CompositorState,
+        layer_shell: &LayerShell,
+        raw_compositor: &wl_compositor::WlCompositor,
+    ) {
+        if self.layer.is_some() {
             return;
         }
 
-        self.layer_visible = visible;
+        let chosen_output = self.choose_output();
+        let surface = compositor.create_surface(qh);
+        let layer = layer_shell.create_layer_surface(qh, surface, Layer::Overlay, Some("skoll"), chosen_output.as_ref());
+        layer.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
+        layer.set_keyboard_interactivity(KeyboardInteractivity::None);
 
-        if let Some(layer) = self.layer.as_ref() {
-            let (width, height) = if visible {
-                (self.width.max(1), self.height.max(1))
-            } else {
-                (0, 0)
-            };
-            layer.set_size(width, height);
-            layer.commit();
-        }
+        let empty_region: wl_region::WlRegion = raw_compositor.create_region(qh, ());
+        layer.wl_surface().set_input_region(Some(&empty_region));
+        layer.set_size(0, 0);
+        layer.commit();
 
-        self.request_redraw(if visible { "layer opened" } else { "layer closed" });
-    }
-
-    pub fn open_layer(&mut self) {
-        self.set_layer_visibility(true);
+        self.layer = Some(layer);
+        self.layer_visible = true;
+        self.width = 1;
+        self.height = 1;
+        self.pool = None;
+        self.buffers = [None, None];
+        self.current_buffer_idx = 0;
+        self.first_configure = true;
+        self.is_waiting_for_frame = false;
+        self.needs_redraw = true;
+        self.last_redraw = Instant::now();
+        self.request_redraw("layer opened");
     }
 
     pub fn close_layer(&mut self) {
-        self.set_layer_visibility(false);
+        if let Some(layer) = self.layer.take() {
+            layer.wl_surface().destroy();
+        }
+
+        self.layer_visible = false;
+        self.pool = None;
+        self.buffers = [None, None];
+        self.current_buffer_idx = 0;
+        self.width = 1;
+        self.height = 1;
+        self.first_configure = true;
+        self.is_waiting_for_frame = false;
+        self.needs_redraw = false;
+        self.request_redraw("layer closed");
     }
 
     pub fn update_niri_data (&mut self, data: Vec<WindowInfo>) {
@@ -551,7 +594,16 @@ impl LayerShellHandler for SkollLayer {
     fn closed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &LayerSurface) {
         eprintln!("LayerShell surface closed by compositor");
         log_to_file("LayerShell surface closed by compositor".to_string());
-        std::process::exit(0);
+        self.layer = None;
+        self.layer_visible = false;
+        self.pool = None;
+        self.buffers = [None, None];
+        self.current_buffer_idx = 0;
+        self.width = 1;
+        self.height = 1;
+        self.first_configure = true;
+        self.is_waiting_for_frame = false;
+        self.needs_redraw = false;
     }
 
     fn configure(&mut self, _: &Connection, qh: &QueueHandle<Self>, _: &LayerSurface, configure: LayerSurfaceConfigure, _: u32) {
