@@ -274,16 +274,18 @@ impl FrameModel {
 } */
 
 pub fn cr_text_aligned (cr: &Context, text: String, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64) {
-    // if v != 0.0 || h != 0.0 {
-        let mut x1 = x;
-        let mut y1 = y;
-        let extents = cr.text_extents(&text).unwrap();
-        x1 -= extents.width() * dx;
-        y1 -= extents.height() * dy + extents.y_bearing();
-        cr.move_to(x1, y1);
-        // dbg_println!("({},{}) -> ({},{})   {:?}", &x, &y, &x1, &y1, extents);
-    // }
+    let extents = cr.text_extents(&text).unwrap();
+    let font = cr.font_extents().unwrap();
+
+    // Cairo draws text from its baseline, not from the visual box height.
+    // Using the font metrics keeps rows visually aligned even when glyphs have
+    // different ascenders/descenders (e.g. lowercase g vs uppercase A).
+    let x1 = x - extents.width() * dx;
+    let y1 = y - font.ascent() + (font.ascent() + font.descent()) * dy;
+
+    cr.move_to(x1, y1);
     cr.show_text(&text).ok();
+
     (extents.width(), extents.height())
 }
 

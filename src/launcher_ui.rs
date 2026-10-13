@@ -124,9 +124,9 @@ impl Launcher {
             let stepy = 24.0;
 
             let (skip, take, mut yline, alphas) = if self.results_index > 0 {
-                (self.results_index - 1, 4, y - stepy, vec![0.8, 1.0, 0.8, 0.6])
+                (self.results_index - 1, 4, y - stepy, vec![0.7, 1.0, 0.7, 0.4])
             } else {
-                (0, 3, y, vec![1.0, 0.8, 0.6])
+                (0, 3, y, vec![1.0, 0.7, 0.4])
             };
             let end = (skip+take).min(self.results.len());
 
@@ -134,7 +134,9 @@ impl Launcher {
 
             cr.set_font_size(18.0);
 
-            for idx in skip..end {
+
+
+            /*for idx in skip..end {
                 // eprintln!("{idx} in {skip}..{end}");
                 let entry = &self.results[idx];
                 let result_text = format!("{} - {}", entry.name, entry.comment);
@@ -145,7 +147,23 @@ impl Launcher {
                     cr_draw_image(&cr, icon_path.clone(), sep + 10.0, yline + 2.0, 20.0, 20.0);
                 }
                 yline += stepy;
+            }*/
+            let entry: &AppEntry = &self.results[self.results_index];
+            let (s1, s2) = if entry.name.to_lowercase().starts_with(&self.query.to_lowercase()) {
+                (self.query.clone(), entry.name[self.query.len()..entry.name.len()].to_string())
+            } else {
+                (self.query.clone(), entry.name.to_string())
+            };
+            // let result_text = format!("{} - {}", entry.name, entry.comment);
+            cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+            let (xt, _yt) = cr_text_aligned(cr, s1, sep + 36.0, yline + 12.0, 0.0, 0.5);
+            cr.set_source_rgba(1.0, 1.0, 1.0, 0.6);
+            cr_text_aligned(cr, s2, sep + 36.0 + xt + 2.0, yline + 12.0, 0.0, 0.5);
+
+            if let Some(icon_path) = entry.icon_path.as_ref() {
+                cr_draw_image(&cr, icon_path.clone(), sep + 10.0, yline + 2.0, 20.0, 20.0);
             }
+            yline += stepy;
 
             /* let entry = &self.results[self.results_index];
             if let Some(icon_path) = entry.icon_path.as_ref() {
