@@ -1,4 +1,4 @@
-use std::{eprintln, path::PathBuf};
+use std::path::PathBuf;
 use std::error::Error;
 use chrono::{DateTime, Duration, Utc};
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -19,7 +19,7 @@ pub struct AppEntry {
     pub terminal: bool
 }
 
-pub fn get_sample () -> Vec<AppEntry> {
+/* pub fn get_sample () -> Vec<AppEntry> {
     Vec::from(vec![
         AppEntry {
             name: "Sample App".into(),
@@ -43,7 +43,7 @@ pub fn get_sample () -> Vec<AppEntry> {
             terminal: false
         }
     ])
-}
+} */
 
 
 use freedesktop_desktop_entry::{default_paths, get_languages_from_env, Iter};

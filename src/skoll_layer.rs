@@ -19,7 +19,7 @@ use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconC
 use crate::launcher_ui::Launcher;
 
 static mut AVG_DUR: u128 = 0;
-static mut AVG_CNT: i64 = 0;
+static mut AVG_CNT: i64 = 0-5;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayerCommand {
@@ -387,7 +387,7 @@ impl SkollLayer {
                     let dur = (end - _start).as_nanos();
                     unsafe {
                         AVG_CNT += 1;
-                        if AVG_CNT > -1 {
+                        if AVG_CNT - 1 > 0 {
                             AVG_DUR += dur;
                             eprintln!("Draw ended ({:.2}ms avg {:.2}ms)", (dur as f64) / 1_000_000.0, ((AVG_DUR as f64)/(AVG_CNT as f64)) / 1_000_000.0); }
                         }
@@ -407,7 +407,7 @@ impl SkollLayer {
         }
     }
 
-    fn draw_test_pill (&mut self, cr: &Context) {
+    /* fn draw_test_pill (&mut self, cr: &Context) {
         self.pills_are_animating = false;
 
         /*if self.pill_container.needs_recalc {
@@ -461,7 +461,7 @@ impl SkollLayer {
         rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
 
         self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);*/
-    }
+    } */
 
     fn draw_background(&mut self, cr: Context) {
         cr.set_operator(cairo::Operator::Source);
@@ -501,7 +501,7 @@ impl SkollLayer {
 
     }
     
-    fn draw_myframe(&mut self, cr: Context) {
+    /* fn draw_myframe(&mut self, cr: Context) {
         // cr.set_operator(cairo::Operator::Source);
 
         // Clear with full transparency
@@ -558,8 +558,7 @@ impl SkollLayer {
         } else {
             cr.fill().unwrap();
         }
-
-    }
+    } */
 }
 
 impl SkollLayer { // This is for icon/stuff management, I like to keep it separated
@@ -770,6 +769,11 @@ impl KeyboardHandler for SkollLayer {
             } else if is_enter_key(u32::from(event.keysym)) {
                 self.launcher.key_enter();
                 self.close_layer();
+            } else if event.keysym == keysyms::KEY_BackSpace.into()
+                   || event.keysym == keysyms::KEY_Delete.into() {
+                self.launcher.key_reset_query();
+            } else if event.keysym == keysyms::KEY_space.into() {
+                self.launcher.handle_key_space();
             } else if event.keysym == keysyms::KEY_Down.into() {
                 self.launcher.key_down();
             } else if event.keysym == keysyms::KEY_Up.into() {

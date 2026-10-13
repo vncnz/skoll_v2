@@ -1,6 +1,7 @@
 use cairo::Context;
+use std::collections::BTreeMap;
 
-use crate::{config::Config, launcher_data::{AppEntry, get_apps, get_sample, load_app_entries}, pills::PillModuleBase, utils::{cr_draw_image, cr_text_aligned, cr_text_layout}};
+use crate::{config::Config, launcher_data::{AppEntry, get_apps, load_app_entries}, utils::{cr_draw_image, cr_text_aligned}};
 
 
 pub enum LauncherMode {
@@ -16,7 +17,8 @@ pub struct Launcher {
     query: String,
     apps: Vec<AppEntry>,
     results: Vec<AppEntry>,
-    results_index: usize
+    results_index: usize,
+    result_calc: String
 }
 
 impl Launcher {
@@ -29,8 +31,13 @@ impl Launcher {
             query: "".into(),
             apps: load_app_entries().unwrap_or_default(), // get_sample(),
             results: Vec::new(),
-            results_index: 0
+            results_index: 0,
+            result_calc: String::new()
         }
+    }
+
+    pub fn refresh_calc (&mut self) {
+        self.needs_redraw = true;
     }
 
     pub fn refresh_results (&mut self) {
@@ -53,6 +60,10 @@ impl Launcher {
         self.needs_redraw = true;
     }
 
+    pub fn handle_key_space (&mut self) {
+        self.query.push(' ');
+    }
+
     pub fn handle_key_num(&mut self, c: char) {
         match self.mode {
             LauncherMode::Search => {
@@ -62,6 +73,14 @@ impl Launcher {
             _ => {}
         };
         self.query.push(c);
+        self.refresh_calc();
+        self.needs_recalc = true;
+        self.needs_redraw = true;
+    }
+
+    pub fn key_reset_query (&mut self) {
+        self.query = String::new();
+        self.refresh_results();
         self.needs_recalc = true;
         self.needs_redraw = true;
     }
@@ -102,6 +121,27 @@ impl Launcher {
         
     }
 
+    fn draw_app_result (&mut self, cr: &Context, idx: usize, plain: bool, x: f64, y: f64, color: (f64, f64, f64, f64)) -> (f64, f64) {
+        let entry: &AppEntry = &self.results[idx];
+        let (s1, s2) = if plain {
+            ("".to_string(), entry.name.clone())
+        } else if entry.name.to_lowercase().starts_with(&self.query.to_lowercase()) {
+            (self.query.clone(), entry.name[self.query.len()..entry.name.len()].to_string())
+        } else {
+            (self.query.clone(), format!(" ({})", entry.name.to_string()))
+        };
+        // let result_text = format!("{} - {}", entry.name, entry.comment);
+        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        let (xt, yt) = cr_text_aligned(cr, s1, x + 36.0, y, 0.0, 0.0);
+        cr.set_source_rgba(color.0, color.1, color.2, color.3);
+        cr_text_aligned(cr, s2, x + 36.0 + xt + 2.0, y, 0.0, 0.0);
+
+        if let Some(icon_path) = entry.icon_path.as_ref() {
+            cr_draw_image(&cr, icon_path.clone(), x + 10.0, y - 16.0, 20.0, 20.0);
+        }
+        (xt, yt)
+    }
+
     pub fn draw_search (&mut self, _config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
 
         self.needs_redraw = false;
@@ -118,59 +158,35 @@ impl Launcher {
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.set_font_size(18.0);
-        cr_text_aligned(cr, "execute".into(), sep, y + 12.0, 1.0, 0.5);
+        cr_text_aligned(cr, "execute".into(), sep, y, 1.0, 0.0);
+
+        // let white = (1.0, 1.0, 1.0, 1.0);
+        let gray0 = (0.7, 0.7, 0.7, 1.0);
+        let gray1 = (0.5, 0.5, 0.5, 1.0);
+        let gray2 = (0.35, 0.35, 0.35, 1.0);
+        let gray3 = (0.2, 0.2, 0.2, 1.0);
 
         if self.results.len() > 0 {
-            let stepy = 24.0;
-
-            let (skip, take, mut yline, alphas) = if self.results_index > 0 {
-                (self.results_index - 1, 4, y - stepy, vec![0.7, 1.0, 0.7, 0.4])
-            } else {
-                (0, 3, y, vec![1.0, 0.7, 0.4])
-            };
-            let end = (skip+take).min(self.results.len());
-
-            eprintln!("({}) {skip}..{end}   results:{}", self.results_index, self.results.len());
 
             cr.set_font_size(18.0);
-
-
-
-            /*for idx in skip..end {
-                // eprintln!("{idx} in {skip}..{end}");
-                let entry = &self.results[idx];
-                let result_text = format!("{} - {}", entry.name, entry.comment);
-                let alpha = alphas[idx - skip];
-                cr.set_source_rgba(1.0, 1.0, 1.0, alpha);
-                cr_text_aligned(cr, result_text.clone(), sep + 36.0, yline + 12.0, 0.0, 0.5);
-                if let Some(icon_path) = entry.icon_path.as_ref() {
-                    cr_draw_image(&cr, icon_path.clone(), sep + 10.0, yline + 2.0, 20.0, 20.0);
-                }
-                yline += stepy;
-            }*/
-            let entry: &AppEntry = &self.results[self.results_index];
-            let (s1, s2) = if entry.name.to_lowercase().starts_with(&self.query.to_lowercase()) {
-                (self.query.clone(), entry.name[self.query.len()..entry.name.len()].to_string())
-            } else {
-                (self.query.clone(), entry.name.to_string())
-            };
-            // let result_text = format!("{} - {}", entry.name, entry.comment);
-            cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-            let (xt, _yt) = cr_text_aligned(cr, s1, sep + 36.0, yline + 12.0, 0.0, 0.5);
-            cr.set_source_rgba(1.0, 1.0, 1.0, 0.6);
-            cr_text_aligned(cr, s2, sep + 36.0 + xt + 2.0, yline + 12.0, 0.0, 0.5);
-
-            if let Some(icon_path) = entry.icon_path.as_ref() {
-                cr_draw_image(&cr, icon_path.clone(), sep + 10.0, yline + 2.0, 20.0, 20.0);
+            if self.results_index > 0 {
+                let (_xt, _yt) = self.draw_app_result(&cr, self.results_index - 1, true, sep, y - 24.0, gray1);
             }
-            yline += stepy;
 
-            /* let entry = &self.results[self.results_index];
-            if let Some(icon_path) = entry.icon_path.as_ref() {
-                cr_draw_image(&cr, icon_path.clone(), 10.0, 10.0, 40.0, 40.0);
-            } else {
-                eprintln!("----- No image ----")
-            } */
+            let (_xt, _yt) = self.draw_app_result(&cr, self.results_index, false, sep, y, gray0);
+
+            for (idx, color) in vec![
+                (1, gray1),
+                (2, gray2),
+                (3, gray3)
+            ] {
+                if self.results_index + idx < self.results.len() {
+                    let (_xt, _yt) = self.draw_app_result(&cr, self.results_index + idx, true, sep, y + (24.0 * idx as f64), color);
+                }
+            }
+
+            // rounded_rect_gradient(cr, sep, 0.0, 10.0, 30.0, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.4))], crate::utils::GradientDirection::Horizontal, false, None);
+
         } else {
             cr_text_aligned(cr, "No results".into(), sep + 80.0, y, 0.0, 0.0);
         }
@@ -196,13 +212,20 @@ impl Launcher {
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.set_font_size(18.0);
-        cr_text_aligned(cr, "calculate".into(), sep, y + 12.0, 1.0, 0.5);
+        cr_text_aligned(cr, "calculate".into(), sep, y, 1.0, 0.5);
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        let (xt,yt) = cr_text_aligned(cr, self.query.clone(), sep + 36.0, y + 12.0, 0.0, 0.5);
+        let (xt,_yt) = cr_text_aligned(cr, self.query.clone(), sep + 36.0, y, 0.0, 0.5);
 
-        cr.set_source_rgba(0.7, 0.7, 0.7, 1.0);
-        let (xt,yt) = cr_text_aligned(cr, "= 123".into(), sep + 36.0 + xt + 10.0, y + 12.0, 0.0, 0.5);
+
+        // TODO: move it in recalc method!
+        let mut map: BTreeMap<String, f64> = BTreeMap::new();
+        self.result_calc = if let Ok(res) = fasteval::ez_eval(&self.query, &mut map) { format!(" = {res}") } else { " ?".to_string() };
+
+        if !self.result_calc.is_empty() {
+            cr.set_source_rgba(0.7, 0.7, 0.7, 1.0);
+            let (_xt,_yt) = cr_text_aligned(cr, self.result_calc.to_string(), sep + 36.0 + xt + 10.0, y, 0.0, 0.5);
+        }
 
     }
 }

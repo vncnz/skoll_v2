@@ -39,6 +39,7 @@ enum_dispatch = "0.3.13"
 freedesktop-desktop-entry = "0.7.13"
 fuzzy-matcher = "0.3.7"
 strsim = "0.11.1"
+fasteval = "0.2.4"
 
 
 # [profile.release]
