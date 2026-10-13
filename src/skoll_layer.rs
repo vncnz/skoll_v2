@@ -5,7 +5,7 @@ use wayland_client::{Connection, QueueHandle, protocol::{wl_compositor, wl_keybo
 use cairo::{Context, Format, ImageSurface};
 use xkbcommon::xkb::keysyms;
 
-use std::{num::NonZeroU32, time::{Duration, Instant}};
+use std::{eprintln, num::NonZeroU32, time::{Duration, Instant}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
@@ -164,7 +164,7 @@ impl SkollLayer {
             return;
         }
 
-        self.launcher.refresh_results();
+        // self.launcher.refresh_results();
 
         let chosen_output = self.choose_output();
         let surface = compositor.create_surface(qh);
@@ -256,10 +256,8 @@ impl SkollLayer {
     }
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
-        if self.launcher.needs_recalc {
-            self.launcher.recalc();
-        }
-        if self.launcher.needs_redraw {
+        // eprintln!("{} {:?}", "MAYBE REDRAW".green(), self.needs_redraw);
+        if self.launcher.needs_redraw() {
             self.needs_redraw = true;
         }
         /*if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
@@ -400,6 +398,7 @@ impl SkollLayer {
 
     fn draw_launcher(&mut self, cr: &Context) {
         if let Some(_layer) = &self.layer {
+            // eprintln!("{}", "DRAWING LAUNCHER IN LAYER".green());
             // let (width, height) = layer.current_size();
             let width = 500.0;
             let height = 200.0;
@@ -762,8 +761,8 @@ impl KeyboardHandler for SkollLayer {
         event: KeyEvent,
     ) {
         if self.keyboard_focus {
+            eprintln!("KEY pressed: {:?}", event);
             if is_escape_key(u32::from(event.keysym)) {
-                // eprintln!("[skoll] ESC pressed — closing launcher layer");
                 self.close_layer();
             } else if is_enter_key(u32::from(event.keysym)) {
                 self.launcher.key_enter();

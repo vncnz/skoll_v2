@@ -1,159 +1,124 @@
 use cairo::Context;
-use std::collections::BTreeMap;
+use colored::Colorize;
+use std::{collections::BTreeMap, eprintln};
 
 use crate::{config::Config, launcher_data::{AppEntry, get_apps, load_app_entries}, utils::{cr_draw_image, cr_text_aligned}};
 
-
-pub enum LauncherMode {
-    Search,
-    Calculator
+trait LauncherModule {
+    // fn recalc (&mut self);
+    fn new () -> Self;
+    fn needs_redraw (&self) -> bool;
+    fn key_down (&mut self);
+    fn key_up (&mut self);
+    // fn needs_recalc (&self) -> bool;
+    fn update_query (&mut self, query: &str);
+    fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64);
 }
 
-pub struct Launcher {
-    pub needs_redraw: bool,
-    pub needs_recalc: bool,
-    mode: LauncherMode,
-    // base: PillModuleBase,
+struct Calculator {
+    dirty_ui: bool,
+    query: String,
+    result: String
+}
+
+impl LauncherModule for Calculator {
+    fn new () -> Calculator {
+        Calculator {
+            query: String::new(),
+            dirty_ui: true,
+            result: String::new()
+        }
+    }
+    fn needs_redraw (&self) -> bool {
+        self.dirty_ui
+    }
+
+    fn key_down (&mut self) {
+        // Handle key down event for calculator
+    }
+
+    fn key_up (&mut self) {
+        // Handle key up event for calculator
+    }
+
+    fn update_query (&mut self, query: &str) {
+        let mut map: BTreeMap<String, f64> = BTreeMap::new();
+        self.result = if let Ok(res) = fasteval::ez_eval(query, &mut map) { format!(" = {res}") } else { " ?".to_string() };
+        self.query = query.to_string();
+        self.dirty_ui = true;
+    }
+
+    fn draw (&mut self, _config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
+
+        self.dirty_ui = false;
+
+        cr.set_font_size(18.0);
+
+        let sep = 600.0;
+        let y = 200.0;
+
+        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        cr.set_font_size(18.0);
+        cr_text_aligned(cr, "calculate".into(), sep, y, 1.0, 0.5);
+
+        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        let (xt,_yt) = cr_text_aligned(cr, self.query.clone(), sep + 36.0, y, 0.0, 0.5);
+
+        if !self.result.is_empty() {
+            cr.set_source_rgba(0.7, 0.7, 0.7, 1.0);
+            let (_xt,_yt) = cr_text_aligned(cr, self.result.to_string(), sep + 36.0 + xt + 10.0, y, 0.0, 0.5);
+        }
+    }
+}
+
+struct Search {
+    dirty_ui: bool,
     query: String,
     apps: Vec<AppEntry>,
     results: Vec<AppEntry>,
-    results_index: usize,
-    result_calc: String
+    results_index: usize
 }
 
-impl Launcher {
-    pub fn new () -> Launcher {
-        Launcher {
-            needs_redraw: true,
-            needs_recalc: false,
-            mode: LauncherMode::Search,
-            // base: PillModuleBase::new(),
-            query: "".into(),
-            apps: load_app_entries().unwrap_or_default(), // get_sample(),
+impl LauncherModule for Search {
+    fn new () -> Search {
+        Search {
+            query: String::new(),
+            dirty_ui: true,
+            apps: load_app_entries().unwrap_or_default(),
             results: Vec::new(),
-            results_index: 0,
-            result_calc: String::new()
+            results_index: 0
         }
     }
-
-    pub fn refresh_calc (&mut self) {
-        self.needs_redraw = true;
+    fn needs_redraw (&self) -> bool {
+        self.dirty_ui
     }
 
-    pub fn refresh_results (&mut self) {
-        self.results = get_apps(&self.apps, &self.query);
-        self.results_index = 0;
-        self.needs_redraw = true;
-    }
-
-    pub fn handle_key_char(&mut self, c: char) {
-        match self.mode {
-            LauncherMode::Calculator => {
-                self.mode = LauncherMode::Search;
-                self.query = String::new();
-            },
-            _ => {}
-        };
-        self.query.push(c);
-        self.refresh_results();
-        self.needs_recalc = true;
-        self.needs_redraw = true;
-    }
-
-    pub fn handle_key_space (&mut self) {
-        self.query.push(' ');
-    }
-
-    pub fn handle_key_num(&mut self, c: char) {
-        match self.mode {
-            LauncherMode::Search => {
-                self.mode = LauncherMode::Calculator;
-                self.query = String::new();
-            },
-            _ => {}
-        };
-        self.query.push(c);
-        self.refresh_calc();
-        self.needs_recalc = true;
-        self.needs_redraw = true;
-    }
-
-    pub fn key_reset_query (&mut self) {
-        self.query = String::new();
-        self.refresh_results();
-        self.needs_recalc = true;
-        self.needs_redraw = true;
-    }
-
-    pub fn key_backspace (&mut self) {
-        if !self.query.is_empty() {
-            self.query.pop();
-            self.refresh_results();
-            self.needs_recalc = true;
-            self.needs_redraw = true;
-        }
-    }
-
-    pub fn key_down (&mut self) {
-        // eprintln!("{} {}", self.results_index, self.results.len());
+    fn key_down (&mut self) {
         if self.results_index < self.results.len() - 1 {
             self.results_index += 1;
-            self.needs_recalc = true;
-            self.needs_redraw = true;
+            self.dirty_ui = true;
         }
     }
-    pub fn key_up (&mut self) {
+
+    fn key_up (&mut self) {
         if self.results_index > 0 {
             self.results_index -= 1;
-            self.needs_recalc = true;
-            self.needs_redraw = true;
+            self.dirty_ui = true;
         }
     }
 
-    pub fn key_enter (&mut self) {
-        // TODO
+    fn update_query (&mut self, query: &str) {
+        self.query = query.to_string();
+        self.results = get_apps(&self.apps, &self.query);
+        self.results_index = 0;
+        self.dirty_ui = true;
     }
 
-    pub fn recalc (&mut self) {
-        match self.mode {
-            LauncherMode::Calculator => {},
-            LauncherMode::Search => {}
-        };
-        self.needs_recalc = false;
-    }
+    fn draw (&mut self, _config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
 
-    pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        match self.mode {
-            LauncherMode::Calculator => self.draw_calc(config, cr, rect_width, rect_height, x, y),
-            LauncherMode::Search => self.draw_search(config, cr, rect_width, rect_height, x, y)
-        }
-        
-    }
+        eprintln!("{} {:?}", "DRAWING SEARCH".green(), self.query);
 
-    fn draw_app_result (&mut self, cr: &Context, idx: usize, plain: bool, x: f64, y: f64, color: (f64, f64, f64, f64)) -> (f64, f64) {
-        let entry: &AppEntry = &self.results[idx];
-        let (s1, s2) = if plain {
-            ("".to_string(), entry.name.clone())
-        } else if entry.name.to_lowercase().starts_with(&self.query.to_lowercase()) {
-            (self.query.clone(), entry.name[self.query.len()..entry.name.len()].to_string())
-        } else {
-            (self.query.clone(), format!(" ({})", entry.name.to_string()))
-        };
-        // let result_text = format!("{} - {}", entry.name, entry.comment);
-        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        let (xt, yt) = cr_text_aligned(cr, s1, x + 36.0, y, 0.0, 0.0);
-        cr.set_source_rgba(color.0, color.1, color.2, color.3);
-        cr_text_aligned(cr, s2, x + 36.0 + xt + 2.0, y, 0.0, 0.0);
-
-        if let Some(icon_path) = entry.icon_path.as_ref() {
-            cr_draw_image(&cr, icon_path.clone(), x + 10.0, y - 16.0, 20.0, 20.0);
-        }
-        (xt, yt)
-    }
-
-    pub fn draw_search (&mut self, _config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
-
-        self.needs_redraw = false;
+        self.dirty_ui = false;
 
         let sep = 600.0;
         let y = 200.0;
@@ -209,33 +174,150 @@ impl Launcher {
         
         self.base.draw_aligned(cr, 200.0, rect_height, sep + 20.0, y, pango::Alignment::Left); */
     }
+}
 
-    pub fn draw_calc (&mut self, _config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
-
-        self.needs_redraw = false;
-
-        cr.set_font_size(18.0);
-
-        let sep = 600.0;
-        let y = 200.0;
-
+impl Search {
+    fn draw_app_result (&mut self, cr: &Context, idx: usize, plain: bool, x: f64, y: f64, color: (f64, f64, f64, f64)) -> (f64, f64) {
+        let entry: &AppEntry = &self.results[idx];
+        let (s1, s2) = if plain {
+            ("".to_string(), entry.name.clone())
+        } else if entry.name.to_lowercase().starts_with(&self.query.to_lowercase()) {
+            (self.query.clone(), entry.name[self.query.len()..entry.name.len()].to_string())
+        } else {
+            (self.query.clone(), format!(" ({})", entry.name.to_string()))
+        };
+        // let result_text = format!("{} - {}", entry.name, entry.comment);
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        cr.set_font_size(18.0);
-        cr_text_aligned(cr, "calculate".into(), sep, y, 1.0, 0.5);
+        let (xt, yt) = cr_text_aligned(cr, s1, x + 36.0, y, 0.0, 0.0);
+        cr.set_source_rgba(color.0, color.1, color.2, color.3);
+        cr_text_aligned(cr, s2, x + 36.0 + xt + 2.0, y, 0.0, 0.0);
 
-        cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        let (xt,_yt) = cr_text_aligned(cr, self.query.clone(), sep + 36.0, y, 0.0, 0.5);
-
-
-        // TODO: move it in recalc method!
-        let mut map: BTreeMap<String, f64> = BTreeMap::new();
-        self.result_calc = if let Ok(res) = fasteval::ez_eval(&self.query, &mut map) { format!(" = {res}") } else { " ?".to_string() };
-
-        if !self.result_calc.is_empty() {
-            cr.set_source_rgba(0.7, 0.7, 0.7, 1.0);
-            let (_xt,_yt) = cr_text_aligned(cr, self.result_calc.to_string(), sep + 36.0 + xt + 10.0, y, 0.0, 0.5);
+        if let Some(icon_path) = entry.icon_path.as_ref() {
+            cr_draw_image(&cr, icon_path.clone(), x + 10.0, y - 16.0, 20.0, 20.0);
         }
+        (xt, yt)
+    }
+}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub enum LauncherMode {
+    Search,
+    Calculator
+}
+
+pub struct Launcher {
+    mode: LauncherMode,
+    query: String,
+    // base: PillModuleBase,
+    search: Search,
+    calculator: Calculator
+}
+
+impl Launcher {
+    pub fn new () -> Launcher {
+        Launcher {
+            query: String::new(),
+            mode: LauncherMode::Search,
+            search: Search::new(),
+            calculator: Calculator::new()
+        }
+    }
+
+    pub fn needs_redraw (&self) -> bool {
+        match self.mode {
+            LauncherMode::Search => self.search.needs_redraw(),
+            LauncherMode::Calculator => self.calculator.needs_redraw()
+        }
+    }
+
+    pub fn handle_key_char(&mut self, c: char) {
+        self.query.push(c);
+        match self.mode {
+            LauncherMode::Calculator => {
+                self.mode = LauncherMode::Search;
+            },
+            _ => {}
+        };
+        self.search.update_query(self.query.clone().as_str());
+    }
+
+    pub fn handle_key_space (&mut self) {
+        self.query.push(' ');
+        self.search.update_query(self.query.clone().as_str());
+        self.calculator.update_query(self.query.clone().as_str());
+    }
+
+    pub fn handle_key_num(&mut self, c: char) {
+        self.query.push(c);
+        match self.mode {
+            LauncherMode::Search => {
+                self.mode = LauncherMode::Calculator;
+            },
+            _ => {}
+        };
+        self.calculator.update_query(self.query.clone().as_str());
+    }
+
+    pub fn key_reset_query (&mut self) {
+        self.query = String::new();
+        self.search.update_query(self.query.clone().as_str());
+        self.calculator.update_query(self.query.clone().as_str());
+    }
+
+    pub fn key_backspace (&mut self) {
+        if !self.query.is_empty() {
+            self.query.pop();
+            self.search.update_query(self.query.clone().as_str());
+            self.calculator.update_query(self.query.clone().as_str());
+        }
+    }
+
+    pub fn key_down (&mut self) {
+        match self.mode {
+            LauncherMode::Search => self.search.key_down(),
+            LauncherMode::Calculator => self.calculator.key_down()
+        };
+    }
+    pub fn key_up (&mut self) {
+        match self.mode {
+            LauncherMode::Search => self.search.key_up(),
+            LauncherMode::Calculator => self.calculator.key_up()
+        };
+    }
+
+    pub fn key_enter (&mut self) {
+        // TODO
+    }
+
+    pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+        match self.mode {
+            LauncherMode::Calculator => self.calculator.draw(config, cr, rect_width, rect_height, x, y),
+            LauncherMode::Search => self.search.draw(config, cr, rect_width, rect_height, x, y)
+        }
+        
     }
 }
 
