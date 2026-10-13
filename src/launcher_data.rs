@@ -166,18 +166,18 @@ fn resolve_icon_path(icon_name: String) -> Option<PathBuf> {
     candidates.into_iter().map(PathBuf::from).find(|p| p.exists())
 }
 
-pub fn get_apps (filter: String) -> Vec<AppEntry> {
+pub fn get_apps (apps_entries: &Vec<AppEntry>, filter: &String) -> Vec<AppEntry> {
     // TODO: Stuff to be cached...
 
-    let mut apps_entries: Vec<AppEntry> = vec![];
+    /* let mut apps_entries: Vec<AppEntry> = vec![];
     if apps_entries.len() == 0 {
         apps_entries = load_app_entries().unwrap_or_default();
-    }
+    } */
 
     let uri = if let Ok(path) = std::env::var("XDG_STATE_HOME") { path } else { shellexpand::tilde("~/.local/state/fenrir/history.json").to_string() };
     log_to_file(format!("History path {uri}"));
     let history_path = PathBuf::from(uri); // "/tmp/fenrir-launch-history.json");
-    let mut launch_history: LaunchHistory = load_launch_history(&history_path).unwrap_or_default();
+    let launch_history: LaunchHistory = load_launch_history(&history_path).unwrap_or_default();
     let matcher = SkimMatcherV2::default();
 
 

@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, pills::{Pill, PillModuleTrait}, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, pills::Pill, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
 
 use crate::launcher_ui::Launcher;
 
@@ -74,8 +74,18 @@ pub struct SkollLayer {
 
 }
 
-fn is_escape_key(keysym: u32) -> bool {
+fn is_escape_key (keysym: u32) -> bool {
     keysym == keysyms::KEY_Escape || keysym == 0xFF1B
+}
+fn is_enter_key (keysym: u32) -> bool {
+    keysym == keysyms::KEY_KP_Enter
+}
+fn is_char_key (keysym: u32) -> bool {
+    (keysym >= keysyms::KEY_A && keysym <= keysyms::KEY_Z) ||
+    (keysym >= keysyms::KEY_a && keysym <= keysyms::KEY_z)
+}
+fn is_number_key (keysym: u32) -> bool {
+    keysym >= keysyms::KEY_0 && keysym <= keysyms::KEY_9
 }
 
 impl SkollLayer {
@@ -86,7 +96,7 @@ impl SkollLayer {
         shm: Shm,
         config: Config
     ) -> Self {
-        let pill = Pill::new(&config);
+        // let pill = Pill::new(&config);
 
         SkollLayer {
             registry_state,
@@ -104,7 +114,7 @@ impl SkollLayer {
             // battery_integrated: None,
             needs_redraw: true,
             last_redraw: Instant::now(),
-            redraw_interval: [Duration::from_millis(500), Duration::from_millis(60_000)],
+            redraw_interval: [Duration::from_millis(16), Duration::from_millis(60_000)],
             buffers: [None, None],
             current_buffer_idx: 0,
             config,
@@ -204,27 +214,27 @@ impl SkollLayer {
         self.request_redraw("layer closed");
     }
 
-    pub fn update_niri_data (&mut self, data: Vec<WindowInfo>) {
+    pub fn update_niri_data (&mut self, _data: Vec<WindowInfo>) {
         /*if self.pill_container.update_data_niri(data) {
             // self.pill_container.recalculate_normal_target();
             // self.request_redraw("pill_container animation (niri)");
         }*/
     }
 
-    pub fn update_battery_data (&mut self, data: Option<crate::battery::BatteryStats>) {
+    pub fn update_battery_data (&mut self, _data: Option<crate::battery::BatteryStats>) {
         /*if self.pill_container.update_data_battery(data, self.config.show_watts) {
             self.pill_container.recalculate_normal_target();
             self.request_redraw("pill_container animation");
         }*/
     }
 
-    pub fn update_devices_data (&mut self, data: Vec<BatteryDevice>) {
+    pub fn update_devices_data (&mut self, _data: Vec<BatteryDevice>) {
         /*self.batteries = data;
         self.batteries_pristine = true;
         let _ = self.pill_container.update_data_devices(self.batteries.clone());*/
     }
 
-    pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
+    pub fn set_countdown (&mut self, _input: &str) -> Result<u64, &'static str> {
         // self.pill_container.set_countdown(input)
         Ok(0)
     }
@@ -555,13 +565,13 @@ impl SkollLayer {
 impl SkollLayer { // This is for icon/stuff management, I like to keep it separated
     pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
 
-        let mut already_present = false;
+        /* let mut already_present = false;
         if let Some(found) = self.icons.get(id) {
             already_present = true;
             if f64::abs(found.warn - warn) < 0.05 && found.info == info {
                 return IconChange::None;
             }
-        }
+        } */
 
         self.icons.insert(
             id.to_string(),
@@ -753,11 +763,25 @@ impl KeyboardHandler for SkollLayer {
         event: KeyEvent,
     ) {
         if self.keyboard_focus {
+            eprintln!("{} {:?}", "KEY PRESSED".red(), event);
             if is_escape_key(u32::from(event.keysym)) {
-                eprintln!("[skoll] ESC pressed — closing launcher layer");
+                // eprintln!("[skoll] ESC pressed — closing launcher layer");
                 self.close_layer();
-            } else if let Some(c) = event.keysym.key_char() {
+            } else if is_enter_key(u32::from(event.keysym)) {
+                self.launcher.key_enter();
+                self.close_layer();
+            } else if event.keysym == keysyms::KEY_Down.into() {
+                self.launcher.key_down();
+            } else if event.keysym == keysyms::KEY_Up.into() {
+                self.launcher.key_up();
+            } else if is_char_key(u32::from(event.keysym)) && let Some(c) = event.keysym.key_char() {
                 self.launcher.handle_key_char(c);
+            } else if is_number_key(u32::from(event.keysym)) && let Some(c) = event.keysym.key_char() {
+                self.launcher.handle_key_num(c);
+            } else if let Some(c) = event.keysym.key_char() {
+                if c == '+' {
+                    self.launcher.handle_key_num(c);
+                }
             }
         }
     }

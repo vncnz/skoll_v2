@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[macro_export]
 macro_rules! dbg_println {
     ($($arg:tt)*) => {
@@ -111,7 +113,7 @@ pub fn log_to_file(msg: String) {
 
 use std::time::{Duration, Instant};
 
-use cairo::Context;
+use cairo::{Context, ImageSurface};
 
 /* ANIMATION SYSTEM */
 
@@ -395,6 +397,60 @@ pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64, max_width: Optio
     let h = logical_rect.height() as f64 / pango::SCALE as f64;
     
     Ok((layout, (w, h)))
+}
+
+pub fn cr_draw_image (cr: &Context, path: PathBuf, x: f64, y: f64, width: f64, height: f64) {
+    if width <= 0.0 || height <= 0.0 || !path.is_file() {
+        return;
+    }
+
+    let Ok(img) = image::open(&path) else {
+        return;
+    };
+
+    let rgba = img.to_rgba8();
+    let (img_w, img_h) = rgba.dimensions();
+    if img_w == 0 || img_h == 0 {
+        return;
+    }
+
+    let mut premultiplied = Vec::with_capacity((img_w * img_h * 4) as usize);
+    for pixel in rgba.pixels() {
+        let [r, g, b, a] = pixel.0;
+        let a_f = a as f64 / 255.0;
+        let r = (r as f64 * a_f).round() as u8;
+        let g = (g as f64 * a_f).round() as u8;
+        let b = (b as f64 * a_f).round() as u8;
+        premultiplied.extend_from_slice(&[b, g, r, a]);
+    }
+
+    let stride = cairo::Format::ARgb32
+        .stride_for_width(img_w)
+        .expect("failed to compute cairo stride for image");
+
+    let Ok(surface) = cairo::ImageSurface::create_for_data(
+        premultiplied,
+        cairo::Format::ARgb32,
+        img_w as i32,
+        img_h as i32,
+        stride,
+    ) else {
+        return;
+    };
+
+    let scale = (width / img_w as f64).min(height / img_h as f64);
+    let scaled_w = img_w as f64 * scale;
+    let scaled_h = img_h as f64 * scale;
+
+    cr.save().unwrap();
+    cr.set_operator(cairo::Operator::Over);
+    cr.rectangle(x, y, width, height);
+    cr.clip();
+    cr.translate(x + (width - scaled_w) / 2.0, y + (height - scaled_h) / 2.0);
+    cr.scale(scale, scale);
+    cr.set_source_surface(&surface, 0.0, 0.0).unwrap();
+    cr.paint().unwrap();
+    cr.restore().unwrap();
 }
 
 /* use pango::{FontDescription, Gravity, WrapMode, SCALE};
@@ -843,4 +899,47 @@ impl TweenState {
     /* pub fn is_animating(&self) -> bool {
         self.animation_start.is_some()
     } */
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn cr_draw_image_paints_pixels() {
+        let path = std::env::temp_dir().join(format!(
+            "skoll_cr_draw_image_{}_{}.png",
+            std::process::id(),
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+
+        let img = image::ImageBuffer::from_pixel(
+            2,
+            2,
+            image::Rgba([255_u8, 0_u8, 0_u8, 128_u8]),
+        );
+        img.save(&path).unwrap();
+
+        let mut surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 10, 10).unwrap();
+        let cr = cairo::Context::new(&surface).unwrap();
+
+        cr.set_source_rgba(0.0, 1.0, 0.0, 0.5);
+        cr.rectangle(0.0, 0.0, 10.0, 10.0);
+        cr.fill().unwrap();
+
+        cr.set_operator(cairo::Operator::Source);
+        cr_draw_image(&cr, path.clone(), 5.0, 5.0, 4.0, 4.0);
+
+        drop(cr);
+
+        let pixels = surface.data().unwrap();
+        let inside_pixel = pixels.chunks_exact(4).nth(7 * 10 + 7).unwrap();
+        let outside_pixel = pixels.chunks_exact(4).nth(0).unwrap();
+
+        std::fs::remove_file(&path).unwrap();
+
+        assert!(inside_pixel.iter().any(|&byte| byte > 0), "image should have painted at least one visible pixel in its target box");
+        assert!(outside_pixel[1] > 0, "semi-transparent layer should still show the green background under the image");
+    }
 }
