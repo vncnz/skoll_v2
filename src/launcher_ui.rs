@@ -85,6 +85,15 @@ impl Launcher {
         self.needs_redraw = true;
     }
 
+    pub fn key_backspace (&mut self) {
+        if !self.query.is_empty() {
+            self.query.pop();
+            self.refresh_results();
+            self.needs_recalc = true;
+            self.needs_redraw = true;
+        }
+    }
+
     pub fn key_down (&mut self) {
         // eprintln!("{} {}", self.results_index, self.results.len());
         if self.results_index < self.results.len() - 1 {

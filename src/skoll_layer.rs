@@ -470,7 +470,7 @@ impl SkollLayer {
         // cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
         // cr.set_operator(cairo::Operator::Clear);
         // cr.paint().unwrap();
-        // cr.set_operator(cairo::Operator::Over);
+        // cr.set_operator(cairo::Opeiuirator::Over);
 
         let w = self.width as f64;
         let h = self.height as f64;
@@ -762,15 +762,15 @@ impl KeyboardHandler for SkollLayer {
         event: KeyEvent,
     ) {
         if self.keyboard_focus {
-            eprintln!("{} {:?}", "KEY PRESSED".red(), event);
             if is_escape_key(u32::from(event.keysym)) {
                 // eprintln!("[skoll] ESC pressed — closing launcher layer");
                 self.close_layer();
             } else if is_enter_key(u32::from(event.keysym)) {
                 self.launcher.key_enter();
                 self.close_layer();
-            } else if event.keysym == keysyms::KEY_BackSpace.into()
-                   || event.keysym == keysyms::KEY_Delete.into() {
+            } else if event.keysym == keysyms::KEY_BackSpace.into() {
+                self.launcher.key_backspace();
+            } else if event.keysym == keysyms::KEY_Delete.into() {
                 self.launcher.key_reset_query();
             } else if event.keysym == keysyms::KEY_space.into() {
                 self.launcher.handle_key_space();
@@ -783,9 +783,13 @@ impl KeyboardHandler for SkollLayer {
             } else if is_number_key(u32::from(event.keysym)) && let Some(c) = event.keysym.key_char() {
                 self.launcher.handle_key_num(c);
             } else if let Some(c) = event.keysym.key_char() {
-                if c == '+' {
+                if "+-*/()".contains(c) {
                     self.launcher.handle_key_num(c);
+                } else {
+                    eprintln!("{} {:?}", "KEY PRESSED".red(), event);
                 }
+            } else {
+                eprintln!("{} {:?}", "KEY PRESSED".red(), event);
             }
         }
     }
