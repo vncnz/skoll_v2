@@ -4,10 +4,14 @@ use std::{collections::BTreeMap, eprintln};
 
 use crate::{config::Config, launcher_data::{AppEntry, get_apps, load_app_entries}, utils::{cr_draw_image, cr_text_aligned}};
 
+static X_POINT: f64 = 600.0;
+static Y_POINT: f64 = 200.0;
+
 trait LauncherModule {
     // fn recalc (&mut self);
     fn new () -> Self;
     fn needs_redraw (&self) -> bool;
+    fn key_home (&mut self);
     fn key_down (&mut self);
     fn key_up (&mut self);
     // fn needs_recalc (&self) -> bool;
@@ -31,6 +35,10 @@ impl LauncherModule for Calculator {
     }
     fn needs_redraw (&self) -> bool {
         self.dirty_ui
+    }
+
+    fn key_home (&mut self) {
+        // Handle key home event for calculator
     }
 
     fn key_down (&mut self) {
@@ -81,16 +89,23 @@ struct Search {
 
 impl LauncherModule for Search {
     fn new () -> Search {
+        let apps = load_app_entries().unwrap_or_default();
+        let results = get_apps(&apps, &"".to_string());
         Search {
             query: String::new(),
             dirty_ui: true,
-            apps: load_app_entries().unwrap_or_default(),
-            results: Vec::new(),
+            apps,
+            results,
             results_index: 0
         }
     }
     fn needs_redraw (&self) -> bool {
         self.dirty_ui
+    }
+
+    fn key_home (&mut self) {
+        self.results_index = 0;
+        self.dirty_ui = true;
     }
 
     fn key_down (&mut self) {
@@ -120,9 +135,6 @@ impl LauncherModule for Search {
 
         self.dirty_ui = false;
 
-        let sep = 600.0;
-        let y = 200.0;
-
         /* let (layout, sizes) = cr_text_layout(&cr, &mode_text, 18.0, None).unwrap();
         let color = (1.0, 1.0, 1.0, 1.0);
         self.base.set_layout(layout, sizes, mode_text.into(), color);
@@ -132,7 +144,7 @@ impl LauncherModule for Search {
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.set_font_size(18.0);
-        cr_text_aligned(cr, "execute".into(), sep, y, 1.0, 0.0);
+        cr_text_aligned(cr, "execute".into(), X_POINT, Y_POINT, 1.0, 0.0);
 
         // let white = (1.0, 1.0, 1.0, 1.0);
         let gray0 = (0.7, 0.7, 0.7, 1.0);
@@ -144,10 +156,10 @@ impl LauncherModule for Search {
 
             cr.set_font_size(18.0);
             if self.results_index > 0 {
-                let (_xt, _yt) = self.draw_app_result(&cr, self.results_index - 1, true, sep, y - 24.0, gray1);
+                let (_xt, _yt) = self.draw_app_result(&cr, self.results_index - 1, true, X_POINT, Y_POINT - 24.0, gray1);
             }
 
-            let (_xt, _yt) = self.draw_app_result(&cr, self.results_index, false, sep, y, gray0);
+            let (_xt, _yt) = self.draw_app_result(&cr, self.results_index, false, X_POINT, Y_POINT, gray0);
 
             for (idx, color) in vec![
                 (1, gray1),
@@ -155,14 +167,14 @@ impl LauncherModule for Search {
                 (3, gray3)
             ] {
                 if self.results_index + idx < self.results.len() {
-                    let (_xt, _yt) = self.draw_app_result(&cr, self.results_index + idx, true, sep, y + (24.0 * idx as f64), color);
+                    let (_xt, _yt) = self.draw_app_result(&cr, self.results_index + idx, true, X_POINT, Y_POINT + (24.0 * idx as f64), color);
                 }
             }
 
             // rounded_rect_gradient(cr, sep, 0.0, 10.0, 30.0, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.4))], crate::utils::GradientDirection::Horizontal, false, None);
 
         } else {
-            cr_text_aligned(cr, "No results".into(), sep + 80.0, y, 0.0, 0.0);
+            cr_text_aligned(cr, "No results".into(), X_POINT + 80.0, Y_POINT, 0.0, 0.0);
         }
 
         // cr_text_aligned(cr, result_text.clone(), sep + 20.0, y, 0.0, 0.0);
@@ -295,6 +307,12 @@ impl Launcher {
         }
     }
 
+    pub fn key_home (&mut self) {
+        match self.mode {
+            LauncherMode::Search => self.search.key_home(),
+            LauncherMode::Calculator => self.calculator.key_home()
+        };
+    }
     pub fn key_down (&mut self) {
         match self.mode {
             LauncherMode::Search => self.search.key_down(),

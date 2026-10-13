@@ -78,7 +78,10 @@ fn is_escape_key (keysym: u32) -> bool {
     keysym == keysyms::KEY_Escape || keysym == 0xFF1B
 }
 fn is_enter_key (keysym: u32) -> bool {
-    keysym == keysyms::KEY_KP_Enter
+    keysym == keysyms::KEY_KP_Enter || keysym == keysyms::KEY_Return || keysym == 0xFF0D
+}
+fn is_home_key (keysym: u32) -> bool {
+    keysym == keysyms::KEY_Home || keysym == keysyms::KEY_KP_Home || keysym == 0xFF50
 }
 fn is_char_key (keysym: u32) -> bool {
     (keysym >= keysyms::KEY_A && keysym <= keysyms::KEY_Z) ||
@@ -198,9 +201,6 @@ impl SkollLayer {
         }
 
         self.keyboard_focus = false;
-        if let Some(keyboard) = self.keyboard.take() {
-            keyboard.release();
-        }
 
         self.layer_visible = false;
         self.pool = None;
@@ -643,6 +643,7 @@ impl LayerShellHandler for SkollLayer {
         log_to_file("LayerShell surface closed by compositor".to_string());
         self.layer = None;
         self.layer_visible = false;
+        self.keyboard_focus = false;
         self.pool = None;
         self.buffers = [None, None];
         self.current_buffer_idx = 0;
@@ -777,6 +778,8 @@ impl KeyboardHandler for SkollLayer {
                 self.launcher.key_down();
             } else if event.keysym == keysyms::KEY_Up.into() {
                 self.launcher.key_up();
+            } else if is_home_key(u32::from(event.keysym)) {
+                self.launcher.key_home();
             } else if is_char_key(u32::from(event.keysym)) && let Some(c) = event.keysym.key_char() {
                 self.launcher.handle_key_char(c);
             } else if is_number_key(u32::from(event.keysym)) && let Some(c) = event.keysym.key_char() {
