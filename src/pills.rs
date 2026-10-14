@@ -7,7 +7,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    config::Config, countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, niri::WindowInfo, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    config::Config, countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -454,7 +454,7 @@ impl PillModuleWarnings {
 }
 
 
-pub struct PillModuleNiri {
+/* pub struct PillModuleNiri {
     base: PillModuleBase,
     animation: AnimationState,
 }
@@ -505,7 +505,7 @@ impl PillModuleNiri {
         self.animation.set_target(target);
         true
     }
-}
+} */
 
 
 pub struct PillModuleDevices {
@@ -662,14 +662,14 @@ pub struct Pill {
     pill_clock: PillModuleClock,
     pill_battery: PillModuleLaptopBattery,
     pill_warnings: PillModuleWarnings,
-    pill_niri: PillModuleNiri,
+    // pill_niri: PillModuleNiri,
     pill_countdown: PillModuleCountdown,
     pill_devices: PillModuleDevices,
 
     pill_clock_rect: (f64, f64),
     pill_battery_rect: (f64, f64),
     pill_warnings_rect: (f64, f64),
-    pill_niri_rect: (f64, f64),
+    // pill_niri_rect: (f64, f64),
     pill_countdown_rect: (f64, f64),
     pill_devices_rect: (f64, f64),
 }
@@ -719,13 +719,13 @@ impl Pill {
             pill_clock: PillModuleClock::new(),
             pill_battery: PillModuleLaptopBattery::new(),
             pill_warnings: PillModuleWarnings::new(),
-            pill_niri: PillModuleNiri::new(),
+            // pill_niri: PillModuleNiri::new(),
             pill_countdown: PillModuleCountdown::new(),
             pill_devices: PillModuleDevices::new(config.show_devices_battery_max_level),
             pill_clock_rect: (0.0, 0.0),
             pill_battery_rect: (0.0, 0.0),
             pill_warnings_rect: (0.0, 0.0),
-            pill_niri_rect: (0.0, 0.0),
+            // pill_niri_rect: (0.0, 0.0),
             pill_countdown_rect: (0.0, 0.0),
             pill_devices_rect: (0.0, 0.0),
         }
@@ -776,7 +776,7 @@ impl Pill {
         return changed.0 || changed.1
     }
 
-    pub fn update_data_niri(&mut self, data: Vec<WindowInfo>) -> bool {
+    /* pub fn update_data_niri(&mut self, data: Vec<WindowInfo>) -> bool {
         let changed = self.pill_niri.update_data(&self.dummy_context, data);
         if changed {
             self.pill_niri_rect = self.pill_niri.get_current_rect();
@@ -784,7 +784,7 @@ impl Pill {
             self.needs_redraw = true;
         }
         changed
-    }
+    } */
 
     pub fn update_data_devices(&mut self, batteries: Vec<BatteryDevice>) -> bool {
         let changed = self.pill_devices.update_data(&self.dummy_context, batteries);
@@ -815,25 +815,25 @@ impl Pill {
         }
     }
 
-    fn normal_modules_mut(&mut self) -> [&mut dyn PillModuleTrait; 6] {
+    fn normal_modules_mut(&mut self) -> [&mut dyn PillModuleTrait; 5] {
         [
             &mut self.pill_clock,
             &mut self.pill_battery,
             &mut self.pill_warnings,
-            &mut self.pill_niri,
+            // &mut self.pill_niri,
             &mut self.pill_countdown,
             &mut self.pill_devices,
         ]
     }
 
-    fn normal_rects_mut(&mut self) -> [(&mut (f64, f64), &mut dyn PillModuleTrait); 6] {
+    fn normal_rects_mut(&mut self) -> [(&mut (f64, f64), &mut dyn PillModuleTrait); 5] {
         [
             (&mut self.pill_clock_rect, &mut self.pill_clock),
             (&mut self.pill_battery_rect, &mut self.pill_battery),
             (&mut self.pill_countdown_rect, &mut self.pill_countdown),
             (&mut self.pill_devices_rect, &mut self.pill_devices),
             (&mut self.pill_warnings_rect, &mut self.pill_warnings),
-            (&mut self.pill_niri_rect, &mut self.pill_niri),
+            // (&mut self.pill_niri_rect, &mut self.pill_niri),
         ]
     }
 
@@ -848,7 +848,7 @@ impl Pill {
             .sum::<f64>();
 
         dbg_println!("{} recalculate_normal_target rect_width:{rect_width:?}", "PillContainer".blue());
-        dbg_println!("{} recalculate_normal_target rects: clock:{:?} battery:{:?} warnings:{:?} countdown:{:?} niri:{:?} devices:{:?}", "PillContainer".blue(), self.pill_clock_rect, self.pill_battery_rect, self.pill_warnings_rect, self.pill_countdown_rect, self.pill_niri_rect, self.pill_devices_rect);
+        dbg_println!("{} recalculate_normal_target rects: clock:{:?} battery:{:?} warnings:{:?} countdown:{:?} devices:{:?}", "PillContainer".blue(), self.pill_clock_rect, self.pill_battery_rect, self.pill_warnings_rect, self.pill_countdown_rect, self.pill_devices_rect);
 
         let rect_height = 26.0;
         let fake_width = rect_width - PILL_MARGIN * 2.0; //? Well, it's a bit of a hack, but it works. We reuse the same anomation system of components, but we don't want to add margins in this case. Margins are already added in set_target, so we can just subtract them here.

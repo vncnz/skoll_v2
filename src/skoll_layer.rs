@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::{Config, FrameColor}, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, niri::WindowInfo, pills::Pill, utils::{TweenState, draw_smart_border, log_to_file, mix_color, rounded_rect_gradient}};
+use crate::{config::Config, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, utils::{TweenState, log_to_file}};
 
 use crate::launcher_ui::Launcher;
 
@@ -214,12 +214,12 @@ impl SkollLayer {
         self.request_redraw("layer closed");
     }
 
-    pub fn update_niri_data (&mut self, _data: Vec<WindowInfo>) {
+    /* pub fn update_niri_data (&mut self, _data: Vec<WindowInfo>) {
         /*if self.pill_container.update_data_niri(data) {
             // self.pill_container.recalculate_normal_target();
             // self.request_redraw("pill_container animation (niri)");
         }*/
-    }
+    } */
 
     pub fn update_battery_data (&mut self, _data: Option<crate::battery::BatteryStats>) {
         /*if self.pill_container.update_data_battery(data, self.config.show_watts) {

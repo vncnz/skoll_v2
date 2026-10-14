@@ -14,7 +14,7 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, niri::{handle_niri_command, set_urgent_windows, WindowInfo}, utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -41,7 +41,6 @@ use config::Config;
 
 use crate::skoll_layer::SkollLayer;
 // use crate::battery::start_battery_listener;
-use crate::niri::start_niri_listener;
 
 use clap::{crate_name, crate_version, Parser};
 
@@ -149,7 +148,7 @@ fn main() {
         config.clone()
     );
 
-    if !config.hide_missing_ratatoskr {
+    if config.hide_missing_ratatoskr == false {
         app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, None);
         /* app.animator.animate_property(
             &app.frame_model,
@@ -182,16 +181,6 @@ fn main() {
     thread::spawn(|| {
         // start_battery_listener(tx_battery); // TODO: enable or remove?
         dbg_println!("{}", "Battery listener OK".green().to_string());
-    });
-
-    let (tx_niri, rx_niri): (Sender<Vec<WindowInfo>>, Receiver<Vec<WindowInfo>>) = mpsc::channel();
-    thread::spawn(|| {
-        if let Err(e) = start_niri_listener(tx_niri) {
-            log_to_file(format!("Niri listener error: {:?}", e));
-            dbg_println!("{}", format!("Niri listener error: {:?}", e).red().to_string());
-        } else {
-            dbg_println!("{}", "Niri listener OK".green().to_string());
-        }
     });
 
     let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
@@ -327,32 +316,6 @@ fn main() {
             eprintln!("{}", "Battery update".yellow());
         }
 
-        /* if is_camera_in_use() {
-            eprintln!("{}", "Camera in use!".red());
-        } */
-
-        // Poll niri events for window attention
-        if let Ok(urgent_windows) = rx_niri.try_recv() {
-            set_urgent_windows(urgent_windows.clone());
-            log_to_file(format!("Urgent windows: {:?}", urgent_windows));
-            println!("{}", format!("{} urgent windows: {:?}", urgent_windows.len(), urgent_windows).bright_yellow());
-            app.update_niri_data(urgent_windows);
-        }
-
-        /* match urgent_windows {
-            Some(window_id) => {
-                // For now, we update the layer with a generic attention icon keyed by window id
-                app.add_icon(&format!("win-{}", window_id), "󰙯", (1.0, 0.6, 0.0, 1.0), 1.0, None);
-                app.request_redraw("niri attention");
-            }
-            None => {
-                // Clear all window attention icons (keys start with "win-")
-                let keys: Vec<String> = app.icons.keys().filter(|k| k.starts_with("win-")).cloned().collect();
-                for k in keys { app.remove_icon(&k); }
-                app.request_redraw("niri clear attention");
-            }
-        } */
-
         if let Ok(cmd) = rx_cmds.try_recv() {
             if let Some(layer_cmd) = crate::skoll_layer::LayerCommand::from_input(&cmd) {
                 match layer_cmd {
@@ -365,16 +328,6 @@ fn main() {
                 }
             } else {
                 match &*cmd {
-                    "focus_next_urgent_window" => {
-                        match handle_niri_command("focus_next_urgent_window") {
-                            Ok(()) => {
-                                println!("Focused next urgent Niri window");
-                            },
-                            Err(err) => {
-                                eprintln!("{}", err.red());
-                            }
-                        }
-                    },
                     _ => {
                         println!("cmd to be parsed: {}", cmd);
                         let parts: Vec<&str> = cmd.split(" ").collect();
