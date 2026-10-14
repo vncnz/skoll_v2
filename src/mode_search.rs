@@ -3,7 +3,7 @@ use colored::Colorize;
 use std::collections::HashMap;
 
 use crate::config::Config;
-use crate::launcher_data::{AppEntry, launch_detached};
+use crate::launcher_data::{AppEntry, launch_detached, update_launch_history};
 use crate::launcher_ui::{LauncherModule, X_POINT, Y_POINT};
 use crate::niri::{NiriWindow, focus_niri_window, get_niri_windows};
 use crate::utils::{cr_draw_image, cr_text_aligned, cr_color};
@@ -99,12 +99,7 @@ impl LauncherModule for Search {
                 }
             }
         } else {
-            // TODO
-            /*
-            record_app_launch(app, &mut launch_history, chrono::Utc::now());
-            prune_launch_history(&mut launch_history, Duration::days(30));
-            let _ = save_launch_history(&launch_history, &history_path);
-            */
+            update_launch_history(&entry);
             let _ = launch_detached(&entry.exec);
             eprintln!("launch_detached ran!");
         }

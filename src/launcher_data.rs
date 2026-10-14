@@ -216,6 +216,19 @@ pub fn get_apps (apps_entries: &Vec<AppEntry>, filter: &String) -> Vec<AppEntry>
     filtered
 }
 
+pub fn update_launch_history (app: &AppEntry) {
+
+    // TODO: improve history management in RAM
+    let uri = if let Ok(path) = std::env::var("XDG_STATE_HOME") { path } else { shellexpand::tilde("~/.local/state/fenrir/history.json").to_string() };
+    log_to_file(format!("History path {uri}"));
+    let history_path = PathBuf::from(uri); // "/tmp/fenrir-launch-history.json");
+
+    let mut launch_history: LaunchHistory = load_launch_history(&history_path).unwrap_or_default();
+    record_app_launch(app, &mut launch_history, chrono::Utc::now());
+    prune_launch_history(&mut launch_history, Duration::days(30));
+    let _ = save_launch_history(&launch_history, &history_path);
+}
+
 
 // use regex::Regex;
 // use std::fs::OpenOptions;
