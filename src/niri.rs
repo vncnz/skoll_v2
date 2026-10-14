@@ -2,7 +2,7 @@ use serde_derive::Deserialize;
 use std::process::Command;
 use std::collections::HashMap;
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Debug,Clone)]
 pub struct NiriWindow {
     pub id: u32,
     pub title: Option<String>,
@@ -12,7 +12,7 @@ pub struct NiriWindow {
     pub is_urgent: bool
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Debug)]
 pub struct NiriWorkspace {
     pub id: u8,
     pub idx: u32,

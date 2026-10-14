@@ -180,6 +180,8 @@ impl SkollLayer {
         layer.set_size(0, 0);
         layer.commit();
 
+        self.launcher.on_activate();
+
         self.layer = Some(layer);
         self.layer_visible = true;
         self.keyboard_focus = false;
@@ -476,7 +478,7 @@ impl SkollLayer {
         
         // cr.set_fill_rule(cairo::FillRule::EvenOdd);
 
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.75);
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.85);
         cr.rectangle(0.0, 0.0, w, h);
         cr.fill().unwrap();
 
@@ -774,6 +776,8 @@ impl KeyboardHandler for SkollLayer {
                 self.launcher.key_reset_query();
             } else if event.keysym == keysyms::KEY_space.into() {
                 self.launcher.handle_key_space();
+            } else if event.keysym == keysyms::KEY_Tab.into() {
+                self.launcher.key_tab();
             } else if event.keysym == keysyms::KEY_Down.into() {
                 self.launcher.key_down();
             } else if event.keysym == keysyms::KEY_Up.into() {

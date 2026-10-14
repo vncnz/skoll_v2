@@ -19,8 +19,13 @@ impl LauncherModule for Calculator {
             result: String::new()
         }
     }
+    fn on_activate (&mut self) {}
     fn needs_redraw (&self) -> bool {
         self.dirty_ui
+    }
+
+    fn key_tab (&mut self) {
+        // Handle key tab event for calculator
     }
 
     fn key_home (&mut self) {

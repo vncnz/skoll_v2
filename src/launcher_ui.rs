@@ -8,8 +8,10 @@ pub static Y_POINT: f64 = 200.0;
 
 pub trait LauncherModule {
     // fn recalc (&mut self);
-    fn new () -> Self;
+    fn new () -> Self where Self: Sized;
     fn needs_redraw (&self) -> bool;
+    fn on_activate (&mut self);
+    fn key_tab (&mut self);
     fn key_home (&mut self);
     fn key_down (&mut self);
     fn key_up (&mut self);
@@ -55,6 +57,19 @@ pub struct Launcher {
     // base: PillModuleBase,
     search: Search,
     calculator: Calculator
+}
+
+macro_rules! forward_key {
+    ($($method:ident($($arg:ident: $ty:ty),*)),* $(,)?) => {
+        $(
+            pub fn $method(&mut self $(, $arg: $ty)*) {
+                match self.mode {
+                    LauncherMode::Search => self.search.$method($($arg),*),
+                    LauncherMode::Calculator => self.calculator.$method($($arg),*),
+                };
+            }
+        )*
+    };
 }
 
 impl Launcher {
@@ -116,13 +131,43 @@ impl Launcher {
         }
     }
 
-    pub fn key_home (&mut self) {
+    /* To replace the forward_key macro in key events management
+    fn active(&mut self) -> &mut dyn LauncherModule {
+        match self.mode {
+            LauncherMode::Search => &mut self.search,
+            LauncherMode::Calculator => &mut self.calculator,
+        }
+    } */
+
+    forward_key!(
+        on_activate(),
+        key_tab(),
+        key_home(),
+        key_down(),
+        key_up()
+        // key_char(c: char), key_arrow(dir: Arrow),
+    );
+
+    /* pub fn on_activate (&mut self) {
+        match self.mode {
+            LauncherMode::Search => self.search.on_activate(),
+            LauncherMode::Calculator => self.calculator.on_activate()
+        };
+    } */
+
+    /* pub fn key_tab (&mut self) {
+        match self.mode {
+            LauncherMode::Search => self.search.key_tab(),
+            LauncherMode::Calculator => self.calculator.key_tab()
+        };
+    } */
+    /* pub fn key_home (&mut self) {
         match self.mode {
             LauncherMode::Search => self.search.key_home(),
             LauncherMode::Calculator => self.calculator.key_home()
         };
-    }
-    pub fn key_down (&mut self) {
+    } */
+    /* pub fn key_down (&mut self) {
         match self.mode {
             LauncherMode::Search => self.search.key_down(),
             LauncherMode::Calculator => self.calculator.key_down()
@@ -133,7 +178,7 @@ impl Launcher {
             LauncherMode::Search => self.search.key_up(),
             LauncherMode::Calculator => self.calculator.key_up()
         };
-    }
+    } */
 
     pub fn key_enter (&mut self) {
         // TODO
@@ -148,3 +193,28 @@ impl Launcher {
     }
 }
 
+
+
+
+
+/*
+macro_rules! forward_key {
+    ($($method:ident($($arg:ident: $ty:ty),*)),* $(,)?) => {
+        $(
+            pub fn $method(&mut self $(, $arg: $ty)*) {
+                match self.mode {
+                    LauncherMode::Search => self.search.$method($($arg),*),
+                    LauncherMode::Calculator => self.calculator.$method($($arg),*),
+                };
+            }
+        )*
+    };
+}
+
+impl Launcher {
+    forward_key!(
+        key_tab(), key_enter(), key_backspace(),
+        key_char(c: char), key_arrow(dir: Arrow),
+    );
+}
+*/

@@ -16,7 +16,8 @@ pub struct AppEntry {
     pub exec: String,
     pub icon_path: Option<PathBuf>,
     pub comment: String,
-    pub terminal: bool
+    pub terminal: bool,
+    pub appid: String
 }
 
 /* pub fn get_sample () -> Vec<AppEntry> {
@@ -142,14 +143,15 @@ pub fn load_app_entries() -> Result<Vec<AppEntry>, Box<dyn Error>> {
     
     for entry in entries {
         // let path_src = PathSource::guess_from(&entry.path);
-        // println!("{:?}: {}\n---\n{}", path_src, entry.path.display(), entry);
+        println!("{:?}", entry);
         if (&entry).no_display() == false {
             results.push(AppEntry {
                 exec: (&entry).exec().unwrap_or_default().to_string(),
                 name: (&entry).name(&vec!["en"]).as_ref().unwrap().to_string(),
                 icon_path: resolve_icon_path((&entry).icon().unwrap_or_default().to_string()),
                 comment: (&entry).comment(&vec!["en"]).unwrap_or_default().to_string(),
-                terminal: (&entry).terminal()
+                terminal: (&entry).terminal(),
+                appid: (&entry).appid.to_string()
             });
         }
     }

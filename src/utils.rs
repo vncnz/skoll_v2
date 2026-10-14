@@ -273,6 +273,10 @@ impl FrameModel {
     }
 } */
 
+pub fn cr_color (cr: &Context, color: (f64, f64, f64, f64)) {
+    cr.set_source_rgba(color.0, color.1, color.2, color.3);
+}
+
 pub fn cr_text_aligned (cr: &Context, text: String, x: f64, y: f64, dx: f64, _dy: f64) -> (f64, f64) {
     let extents = cr.text_extents(&text).unwrap();
 
