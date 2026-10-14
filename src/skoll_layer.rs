@@ -180,8 +180,6 @@ impl SkollLayer {
         layer.set_size(0, 0);
         layer.commit();
 
-        self.launcher.on_activate();
-
         self.layer = Some(layer);
         self.layer_visible = true;
         self.keyboard_focus = false;
@@ -195,6 +193,8 @@ impl SkollLayer {
         self.needs_redraw = true;
         self.last_redraw = Instant::now();
         self.request_redraw("layer opened");
+
+        self.launcher.on_activate();
     }
 
     pub fn close_layer(&mut self) {

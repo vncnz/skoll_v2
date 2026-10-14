@@ -148,7 +148,7 @@ pub fn load_app_entries() -> Result<Vec<AppEntry>, Box<dyn Error>> {
     
     for entry in entries {
         // let path_src = PathSource::guess_from(&entry.path);
-        println!("{:?}", entry);
+        // println!("{:?}", entry);
         if (&entry).no_display() == false {
             results.push(AppEntry {
                 exec: (&entry).exec().unwrap_or_default().to_string(),

@@ -1,6 +1,7 @@
 use cairo::Context;
 use colored::Colorize;
 use std::collections::HashMap;
+use std::time::Instant;
 
 use crate::config::Config;
 use crate::launcher_data::{AppEntry, launch_detached, update_launch_history};
@@ -22,8 +23,15 @@ pub struct Search {
 
 impl LauncherModule for Search {
     fn new () -> Search {
+        let start = Instant::now();
         let apps = load_app_entries().unwrap_or_default();
+        let elapsed = Instant::now().saturating_duration_since(start);
+        eprintln!("{} {}ms", "Application list loaded in:".red(), elapsed.as_millis());
+
+        let start = Instant::now();
         let results = get_apps(&apps, &"".to_string());
+        let elapsed = Instant::now().saturating_duration_since(start);
+        eprintln!("{} {}ms", "Application list filtered in time:".red(), elapsed.as_millis());
         Search {
             query: String::new(),
             dirty_ui: true,
@@ -40,9 +48,12 @@ impl LauncherModule for Search {
     }
 
     fn on_activate (&mut self) {
-        let (windows, workspaces) = get_niri_windows();
-        eprintln!("{windows:?}");
-        eprintln!("{workspaces:?}");
+        
+        let start = Instant::now();
+        let windows = get_niri_windows();
+        let elapsed = Instant::now().saturating_duration_since(start);
+        eprintln!("{} {}", "Niri windows update time:".red(), elapsed.as_millis());
+        // eprintln!("{windows:?}");
         let mut windows_map: HashMap<String,Vec<NiriWindow>> = HashMap::new();
         for w in windows {
             if !windows_map.contains_key(&w.app_id) {
@@ -51,8 +62,10 @@ impl LauncherModule for Search {
                 arr.push(w);
             }
         }
-        eprintln!("{windows_map:?}");
+        // eprintln!("{windows_map:?}");
         self.niri_windows = windows_map;
+        // self.results_index = 0;
+        self.update_query("");
         self.reset_options();
     }
 

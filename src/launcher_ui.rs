@@ -1,5 +1,7 @@
+use std::time::Instant;
+
 use cairo::Context;
-// use colored::Colorize;
+use colored::Colorize;
 
 use crate::{config::Config, mode_calculator::Calculator, mode_search::Search};
 
@@ -183,11 +185,13 @@ impl Launcher {
     } */
 
     pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+        let start = Instant::now();
         match self.mode {
             LauncherMode::Calculator => self.calculator.draw(config, cr, rect_width, rect_height, x, y),
             LauncherMode::Search => self.search.draw(config, cr, rect_width, rect_height, x, y)
         }
-        
+        let elapsed = Instant::now().saturating_duration_since(start);
+        eprintln!("{} {}ms", "Layer draw time:".red(), elapsed.as_millis());
     }
 }
 

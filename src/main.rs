@@ -6,7 +6,7 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput}};
 
-use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration}};
+use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
 
 use std::panic;
 use std::thread;
@@ -186,9 +186,10 @@ fn main() {
     let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
 
 
+    #[cfg(debug_assertions)]
     if true {
         thread::spawn(move || {
-            let actions = vec![
+            let actions: Vec<(&str, &str, Duration)> = vec![
                 ("open", "", Duration::from_secs(1))
                 // ("warning-ram", "0.9", Duration::from_secs(1)),
                 //("warning-load", "0.6", Duration::from_secs(1)),
@@ -320,7 +321,10 @@ fn main() {
             if let Some(layer_cmd) = crate::skoll_layer::LayerCommand::from_input(&cmd) {
                 match layer_cmd {
                     crate::skoll_layer::LayerCommand::Open => {
+                        let start = Instant::now();
                         app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
+                        let elapsed = Instant::now().saturating_duration_since(start);
+                        eprintln!("{} {}ms", "Layer open time:".red(), elapsed.as_millis());
                     },
                     crate::skoll_layer::LayerCommand::Close => {
                         app.close_layer();

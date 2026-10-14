@@ -24,15 +24,15 @@ pub struct NiriWorkspace {
     pub active_window_id: Option<u32>
 }
 
-pub fn get_niri_windows () -> (Vec<NiriWindow>, HashMap<u8, NiriWorkspace>) {
+pub fn get_niri_windows () -> Vec<NiriWindow> {
     // (Vec::new(), HashMap::new())
-    let windows: Vec<NiriWindow>;
-    {
-        let output = Command::new("niri").arg("msg").arg("-j").arg("windows").output();
-        let stdout = String::from_utf8(output.unwrap().stdout).unwrap();
-        // println!("\n{:?}", stdout);
-        windows = serde_json::from_str(&stdout).unwrap();
-    }
+    let output = Command::new("niri").arg("msg").arg("-j").arg("windows").output();
+    let stdout = String::from_utf8(output.unwrap().stdout).unwrap();
+    // println!("\n{:?}", stdout);
+    serde_json::from_str(&stdout).expect("Failed to parse niri windows JSON")
+}
+
+/* pub fn get_niri_workspaces () -> HashMap<u8, NiriWorkspace> {
     let workspaces: Vec<NiriWorkspace>;
     let workspaces_map: HashMap<u8, NiriWorkspace>;
     {
@@ -42,8 +42,8 @@ pub fn get_niri_windows () -> (Vec<NiriWindow>, HashMap<u8, NiriWorkspace>) {
         workspaces = serde_json::from_str(&stdout).unwrap();
         workspaces_map = workspaces.into_iter().map(|ws| (ws.id, ws)).collect();
     }
-    (windows, workspaces_map)
-}
+    workspaces_map
+} */
 
 pub fn focus_niri_window (target_id: u32) -> Result<(), String> {
     let status = Command::new("niri")
