@@ -41,6 +41,7 @@ freedesktop-desktop-entry = "0.7.13"
 fuzzy-matcher = "0.3.7"
 strsim = "0.11.1"
 fasteval = "0.2.4"
+shell-words = "1.1"
 
 
 # [profile.release]

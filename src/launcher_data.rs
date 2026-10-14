@@ -2,10 +2,15 @@ use std::path::PathBuf;
 use std::error::Error;
 use chrono::{DateTime, Duration, Utc};
 use fuzzy_matcher::skim::SkimMatcherV2;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use strsim::damerau_levenshtein;
 use std::fs;
 use std::collections::HashMap;
+use std::fs::OpenOptions;
+use std::process::Stdio;
+use std::process::Command;
+use std::os::unix::process::CommandExt;
 
 use crate::log_to_file;
 use fuzzy_matcher::FuzzyMatcher;
@@ -209,4 +214,57 @@ pub fn get_apps (apps_entries: &Vec<AppEntry>, filter: &String) -> Vec<AppEntry>
     };
     // eprintln!("\n\nFiltered {} apps with query '{}'\n\n", filtered.len(), filter);
     filtered
+}
+
+
+// use regex::Regex;
+// use std::fs::OpenOptions;
+// use std::os::unix::process::CommandExt;
+// use std::process::{Command, Stdio};
+use std::io;
+
+pub fn launch_detached(exec_str: &str) -> io::Result<()> {
+    // 1. Clean FreeDesktop percent codes and escaped %%
+    let placeholder = "\u{0000}";
+    let sanitized = exec_str.replace("%%", placeholder);
+    
+    let re_fields = Regex::new(r"%[UufFdDnNickvm]").unwrap();
+    let cleaned = re_fields.replace_all(&sanitized, "");
+    let cleaned = cleaned.replace(placeholder, "%");
+
+    let args = shell_words::split(&cleaned)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("Parsing error: {}", e)))?;
+
+    if args.is_empty() {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Empty Exec command"));
+    }
+
+    let program = &args[0];
+    let program_args = &args[1..];
+
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/fenrir.log")
+        .or_else(|_| OpenOptions::new().write(true).open("/dev/null"))?;
+
+    let stderr_file = log_file.try_clone()?;
+
+    let mut cmd = Command::new(program);
+    cmd.args(program_args)
+       .stdin(Stdio::null())
+       .stdout(Stdio::from(log_file))
+       .stderr(Stdio::from(stderr_file));
+
+    // 2. Simple single setsid call to create a new session. 
+    // Dropping the spawned child handle without waiting leaves it running detached.
+    unsafe {
+        cmd.pre_exec(|| {
+            libc::setsid();
+            Ok(())
+        });
+    }
+
+    cmd.spawn()?;
+    Ok(())
 }
