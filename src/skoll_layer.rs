@@ -64,7 +64,6 @@ pub struct SkollLayer {
     pub(crate) is_waiting_for_frame: bool,
     pub(crate) batteries: Vec<BatteryDevice>,
     pub(crate) batteries_pristine: bool,
-    // pub(crate) timer: Countdown,
     // pub pill_container: Pill,
     pub(crate) pills_are_animating: bool,
     pub(crate) layer_visible: bool,
@@ -128,7 +127,6 @@ impl SkollLayer {
             is_waiting_for_frame: false,
             batteries: vec![],
             batteries_pristine: false,
-            // timer: Countdown::new(),
             // pill_container: pill,
             pills_are_animating: false,
             layer_visible: true,
@@ -236,17 +234,8 @@ impl SkollLayer {
         let _ = self.pill_container.update_data_devices(self.batteries.clone());*/
     }
 
-    pub fn set_countdown (&mut self, _input: &str) -> Result<u64, &'static str> {
-        // self.pill_container.set_countdown(input)
-        Ok(0)
-    }
-
     pub fn check_redraw_timeout(&mut self) {
-
-        // if self.pill_container.is_countdown_active() && self.last_redraw.elapsed() > Duration::from_secs(1) {
-        /*if self.pill_container.update_data_countdown() {
-            self.request_redraw("timer tick");
-        // } else if self.last_redraw.elapsed() > self.redraw_interval[1] {
+        /*if self.last_redraw.elapsed() > self.redraw_interval[1] {
         } else if self.pill_container.update_data_clock() {
             self.request_redraw("time");
         }*/

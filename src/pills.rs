@@ -7,7 +7,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    config::Config, countdown::Countdown, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    config::Config, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
@@ -226,70 +226,6 @@ impl PillModuleClock {
         self.base.set_layout(layout, sizes, text, color);
         dbg_println!("{} target:{sizes:?}", "PillClock update_data".blue());
         (true, self.animation.set_target(sizes))
-    }
-}
-
-pub struct PillModuleCountdown {
-    base: PillModuleBase,
-    animation: AnimationState,
-    last_status: (bool, String),
-    timer: Countdown
-}
-
-impl PillModuleTrait for PillModuleCountdown {
-    fn draw(&mut self, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
-
-        if self.last_status.0 {
-            let r = 2.0;
-            rounded_rect_gradient(&cr, x + PILL_MARGIN / 2.0, y + 3.0, rect_width - PILL_MARGIN, rect_height - 6.0, r, vec![(0.0, get_color_gradient(1.0))], crate::utils::GradientDirection::Horizontal, false, None); // Alternative red: (1.0, 0.0, 0.41, 1.0)
-        }
-
-        self.base.draw_centered(&cr, rect_width, rect_height, x, y);
-
-        // self.base.draw_centered(cr, rect_width, rect_height, x, y);
-    }
-
-    fn animation_state(&mut self) -> &mut AnimationState {
-        &mut self.animation
-    }
-}
-
-impl PillModuleCountdown {
-    pub fn new() -> Self {
-        PillModuleCountdown {
-            base: PillModuleBase::new(), // with_size((58.0, 20.0)),
-            animation: AnimationState::new(),
-            last_status: (false, "".into()),
-            timer: Countdown::new()
-        }
-    }
-
-    pub fn update_data(&mut self, cr: &cairo::Context) -> (bool, bool) {
-        let (status, time) = self.timer.format_custom_duration(); // TODO: Optimizable!
-        if self.last_status.0 == status && self.last_status.1 == time {
-            return (false, false);
-        }
-
-        let target = if self.timer.is_active() {
-            let w = if status { 1.0 } else { self.timer.get_warning() };
-            let icon = if status { "󱫌" } else { "󱫡" };
-            let color = if status { (0.0, 0.0, 0.0, 1.0) } else { get_color_gradient(w) };
-            let text: &str = if self.timer.is_active() { &format!("{icon} {time}") } else { "" };
-
-            let (layout, sizes) = cr_text_layout(&cr, &text, PILL_FONT_SIZE, None).unwrap();
-            let target = if self.timer.is_active() { (sizes.0, sizes.1) } else { (0.0, 0.0) };
-
-            self.base.set_layout(layout, target, text.to_string(), color);
-            // dbg_println!("{} {target:?}", "countdown target".blue());
-            target
-        } else {
-            self.base.clear();
-            // dbg_println!("{} zero", "countdown target".blue());
-            (0.0, 0.0)
-        };
-        self.last_status = (status, time.clone());
-
-        (true, self.animation.set_target(target))
     }
 }
 
@@ -663,14 +599,12 @@ pub struct Pill {
     pill_battery: PillModuleLaptopBattery,
     pill_warnings: PillModuleWarnings,
     // pill_niri: PillModuleNiri,
-    pill_countdown: PillModuleCountdown,
     pill_devices: PillModuleDevices,
 
     pill_clock_rect: (f64, f64),
     pill_battery_rect: (f64, f64),
     pill_warnings_rect: (f64, f64),
     // pill_niri_rect: (f64, f64),
-    pill_countdown_rect: (f64, f64),
     pill_devices_rect: (f64, f64),
 }
 
@@ -720,13 +654,11 @@ impl Pill {
             pill_battery: PillModuleLaptopBattery::new(),
             pill_warnings: PillModuleWarnings::new(),
             // pill_niri: PillModuleNiri::new(),
-            pill_countdown: PillModuleCountdown::new(),
             pill_devices: PillModuleDevices::new(config.show_devices_battery_max_level),
             pill_clock_rect: (0.0, 0.0),
             pill_battery_rect: (0.0, 0.0),
             pill_warnings_rect: (0.0, 0.0),
             // pill_niri_rect: (0.0, 0.0),
-            pill_countdown_rect: (0.0, 0.0),
             pill_devices_rect: (0.0, 0.0),
         }
     }
@@ -741,14 +673,6 @@ impl Pill {
         return changed.0 || changed.1
     }
 
-    pub fn set_countdown (&mut self, input: &str) -> Result<u64, &'static str> {
-        self.pill_countdown.timer.fill_from_timespan(input) // FIXME: this should be in the pill itself
-    }
-
-    /* pub fn is_countdown_active (&self) -> bool {
-        self.pill_countdown.timer.is_active()
-    } */
-
     pub fn update_data_battery(&mut self, battery: Option<crate::battery::BatteryStats>, show_watts: bool) -> bool {
         let changed = self.pill_battery.update_data(&self.dummy_context, battery, show_watts);
         if changed { self.pill_battery_rect = self.pill_battery.get_current_rect(); }
@@ -760,16 +684,6 @@ impl Pill {
         let changed = self.pill_warnings.update_data(&self.dummy_context, icons);
         if changed.1 {
             self.pill_warnings_rect = self.pill_warnings.get_current_rect();
-            self.needs_recalc = true;
-        }
-        if changed.0 { self.needs_redraw = true; }
-        return changed.0 || changed.1
-    }
-
-    pub fn update_data_countdown(&mut self) -> bool {
-        let changed = self.pill_countdown.update_data(&self.dummy_context);
-        if changed.1 {
-            self.pill_countdown_rect = self.pill_countdown.get_current_rect();
             self.needs_recalc = true;
         }
         if changed.0 { self.needs_redraw = true; }
@@ -815,22 +729,20 @@ impl Pill {
         }
     }
 
-    fn normal_modules_mut(&mut self) -> [&mut dyn PillModuleTrait; 5] {
+    fn normal_modules_mut(&mut self) -> [&mut dyn PillModuleTrait; 4] {
         [
             &mut self.pill_clock,
             &mut self.pill_battery,
             &mut self.pill_warnings,
             // &mut self.pill_niri,
-            &mut self.pill_countdown,
             &mut self.pill_devices,
         ]
     }
 
-    fn normal_rects_mut(&mut self) -> [(&mut (f64, f64), &mut dyn PillModuleTrait); 5] {
+    fn normal_rects_mut(&mut self) -> [(&mut (f64, f64), &mut dyn PillModuleTrait); 4] {
         [
             (&mut self.pill_clock_rect, &mut self.pill_clock),
             (&mut self.pill_battery_rect, &mut self.pill_battery),
-            (&mut self.pill_countdown_rect, &mut self.pill_countdown),
             (&mut self.pill_devices_rect, &mut self.pill_devices),
             (&mut self.pill_warnings_rect, &mut self.pill_warnings),
             // (&mut self.pill_niri_rect, &mut self.pill_niri),
@@ -848,7 +760,7 @@ impl Pill {
             .sum::<f64>();
 
         dbg_println!("{} recalculate_normal_target rect_width:{rect_width:?}", "PillContainer".blue());
-        dbg_println!("{} recalculate_normal_target rects: clock:{:?} battery:{:?} warnings:{:?} countdown:{:?} devices:{:?}", "PillContainer".blue(), self.pill_clock_rect, self.pill_battery_rect, self.pill_warnings_rect, self.pill_countdown_rect, self.pill_devices_rect);
+        dbg_println!("{} recalculate_normal_target rects: clock:{:?} battery:{:?} warnings:{:?} devices:{:?}", "PillContainer".blue(), self.pill_clock_rect, self.pill_battery_rect, self.pill_warnings_rect, self.pill_devices_rect);
 
         let rect_height = 26.0;
         let fake_width = rect_width - PILL_MARGIN * 2.0; //? Well, it's a bit of a hack, but it works. We reuse the same anomation system of components, but we don't want to add margins in this case. Margins are already added in set_target, so we can just subtract them here.

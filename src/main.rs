@@ -29,7 +29,6 @@ mod commands;
 mod niri;
 mod utils;
 mod battery;
-mod countdown;
 mod pills;
 mod launcher_ui;
 mod mode_calculator;
@@ -247,10 +246,6 @@ fn main() {
                 ("close", _) => {
                     app.close_layer();
                 },
-                ("timer", time) => {
-                    app.set_countdown(&time).ok();
-                    app.request_redraw("demo timer");
-                },
                 ("wob", val) => {
                     if let Ok(value) = val.parse::<f64>() {
                         app.show_value(value, None);
@@ -336,26 +331,7 @@ fn main() {
                         println!("cmd to be parsed: {}", cmd);
                         let parts: Vec<&str> = cmd.split(" ").collect();
                         match parts.as_slice() {
-                            ["timer", value_str] => {
-                                match app.set_countdown(value_str) {
-                                    Ok(secs) => {
-                                        if secs > 0 {
-                                            // app.update_timer_icon();
-                                        } else {
-                                            app.remove_icon("timer");
-                                        }
-                                        app.request_redraw("timer set");
-                                        eprintln!("Timer set to {} seconds", secs);
-                                    },
-                                    Err(err) => {
-                                        eprintln!("Error setting timer: {err}");
-                                    }
-                                }
-                                /* match value_str.parse::<f64>() {
-                                    Ok(value) => { eprintln!("Timer set to {} seconds", value); true },
-                                    Err(_) => { eprintln!("Invalid number: {}", value_str); false }
-                                } */
-                            }
+                            ["timer", value_str] => {}
                             
                             [kind, value_str] => {
                                 match value_str.parse::<f64>() {
