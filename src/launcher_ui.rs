@@ -15,6 +15,7 @@ pub trait LauncherModule {
     fn key_home (&mut self);
     fn key_down (&mut self);
     fn key_up (&mut self);
+    fn key_enter (&mut self);
     // fn needs_recalc (&self) -> bool;
     fn update_query (&mut self, query: &str);
     fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64);
@@ -144,7 +145,8 @@ impl Launcher {
         key_tab(),
         key_home(),
         key_down(),
-        key_up()
+        key_up(),
+        key_enter()
         // key_char(c: char), key_arrow(dir: Arrow),
     );
 
@@ -179,10 +181,6 @@ impl Launcher {
             LauncherMode::Calculator => self.calculator.key_up()
         };
     } */
-
-    pub fn key_enter (&mut self) {
-        // TODO
-    }
 
     pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
         match self.mode {

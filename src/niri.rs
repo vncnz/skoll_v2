@@ -1,6 +1,7 @@
 use serde_derive::Deserialize;
 use std::process::Command;
 use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Deserialize,Debug,Clone)]
 pub struct NiriWindow {
@@ -42,4 +43,17 @@ pub fn get_niri_windows () -> (Vec<NiriWindow>, HashMap<u8, NiriWorkspace>) {
         workspaces_map = workspaces.into_iter().map(|ws| (ws.id, ws)).collect();
     }
     (windows, workspaces_map)
+}
+
+pub fn focus_niri_window (target_id: u32) -> Result<(), String> {
+    let status = Command::new("niri")
+        .args(["msg", "action", "focus-window", "--id", &target_id.to_string()])
+        .status()
+        .map_err(|err| format!("Failed to execute niri focus command: {err}"))?;
+
+    if !status.success() {
+        return Err(format!("niri focus-window {} exited with status {:?}", target_id, status.code()));
+    }
+
+    Ok(())
 }

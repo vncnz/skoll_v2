@@ -40,6 +40,10 @@ impl LauncherModule for Calculator {
         // Handle key up event for calculator
     }
 
+    fn key_enter (&mut self) {
+        // Handle key enter event for calculator
+    }
+
     fn update_query (&mut self, query: &str) {
         let mut map: BTreeMap<String, f64> = BTreeMap::new();
         self.result = if let Ok(res) = fasteval::ez_eval(query, &mut map) { format!(" = {res}") } else { " ?".to_string() };

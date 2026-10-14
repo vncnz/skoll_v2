@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::config::Config;
 use crate::launcher_data::AppEntry;
 use crate::launcher_ui::{LauncherModule, X_POINT, Y_POINT};
-use crate::niri::{NiriWindow, get_niri_windows};
+use crate::niri::{NiriWindow, focus_niri_window, get_niri_windows};
 use crate::utils::{cr_draw_image, cr_text_aligned, cr_color};
 use crate::launcher_data::{load_app_entries, get_apps};
 
@@ -81,6 +81,25 @@ impl LauncherModule for Search {
             self.results_index -= 1;
             self.reset_options();
             self.dirty_ui = true;
+        }
+    }
+
+    fn key_enter (&mut self) {
+        let entry: &AppEntry = &self.results[self.results_index];
+        eprintln!("{} {:?}", "ENTER PRESSED".yellow(), entry);
+        eprintln!("self.option_index: {}", self.option_index);
+        eprintln!("{:?}", self.niri_windows.get(&entry.appid));
+
+        if self.option_index > 0 {
+            if let Some(windows) = self.niri_windows.get(&entry.appid) {
+                // eprintln!("{windows:?}");
+                if self.option_index - 1 < windows.len() {
+                    let res = focus_niri_window(windows[self.option_index - 1].id);
+                    eprintln!("Result {res:?}");
+                }
+            }
+        } else {
+            // TODO
         }
     }
 
