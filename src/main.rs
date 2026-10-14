@@ -32,13 +32,15 @@ mod battery;
 mod countdown;
 mod pills;
 mod launcher_ui;
+mod mode_calculator;
+mod mode_search;
 mod launcher_data;
 
 use config::Config;
 // use chrono;
 
 use crate::skoll_layer::SkollLayer;
-use crate::battery::start_battery_listener;
+// use crate::battery::start_battery_listener;
 use crate::niri::start_niri_listener;
 
 use clap::{crate_name, crate_version, Parser};
