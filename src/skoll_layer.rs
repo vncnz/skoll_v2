@@ -752,6 +752,7 @@ impl KeyboardHandler for SkollLayer {
     ) {
         if self.layer.as_ref().is_some_and(|layer| layer.wl_surface() == surface) {
             self.keyboard_focus = false;
+            self.close_layer();
         }
     }
 
