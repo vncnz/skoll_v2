@@ -11,10 +11,8 @@ use std::{sync::mpsc::{self, Receiver, Sender}, time::Duration};
 use std::panic;
 use std::thread;
 
-use colored::Colorize;
-
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, time_of_scope::TimeOfScope, utils::{get_color_gradient, log_to_file, select_icon}
+    commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, time_of_scope::TimeOfScope, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
@@ -24,8 +22,8 @@ mod skoll_layer;
 mod commands;
 mod niri;
 mod utils;
-mod battery;
-mod pills;
+// mod battery;
+// mod pills;
 mod launcher_ui;
 mod mode_calculator;
 mod mode_search;
@@ -53,7 +51,7 @@ struct Args {
     #[arg(short = 'V', long, help = "Print version")]
     version: bool,
 }
-
+/*
 fn choose_output (app: &SkollLayer) -> std::option::Option<WlOutput>{
     let mut chosen_output = None;
     for output in app.output_state.outputs() {
@@ -74,6 +72,7 @@ fn choose_output (app: &SkollLayer) -> std::option::Option<WlOutput>{
     }
     chosen_output
 }
+*/
 
 fn main() {
 
@@ -173,11 +172,11 @@ fn main() {
 
     let mut sock = RatatoskrSocket::new("/tmp/ratatoskr.sock");
 
-    let (_tx_battery, rx_battery): (Sender<BatteryStats>, Receiver<BatteryStats>) = mpsc::channel();
+    /* let (_tx_battery, rx_battery): (Sender<BatteryStats>, Receiver<BatteryStats>) = mpsc::channel();
     thread::spawn(|| {
         // start_battery_listener(tx_battery); // TODO: enable or remove?
         dbg_println!("{}", "Battery listener OK".green().to_string());
-    });
+    }); */
 
     let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
 
@@ -257,18 +256,6 @@ fn main() {
                         eprintln!("Invalid wob value: {}", val);
                     }
                 },
-                ("battery", charging_str) => {
-                    if let Ok(charging) = charging_str.parse::<bool>() {
-                        let bat = BatteryStats {
-                            percentage: 60.0,
-                            state: if charging { BatteryState::Charging } else { BatteryState::Discharging },
-                            eta_minutes: Some(if charging { 12.0 } else { 312.0 }),
-                            flow: Some(10.34)
-                        };
-                        app.update_battery_data(Some(bat));
-                        app.request_redraw("demo battery");
-                    }
-                },
                 ("warning-ram", w) => {
                     if let Ok(w) = w.parse::<f64>() {
                         if w > 0.3 { app.add_icon("demoram", "󰘚", get_color_gradient(w), w, None); }
@@ -308,12 +295,6 @@ fn main() {
                     eprintln!("Unknown demo command: {} {}", kind, value);
                 }
             }
-        }
-
-        if let Ok(bat) = rx_battery.try_recv() {
-            app.update_battery_data(Some(bat));
-            app.request_redraw(&"battery");
-            eprintln!("{}", "Battery update".yellow());
         }
 
         if let Ok(cmd) = rx_cmds.try_recv() {

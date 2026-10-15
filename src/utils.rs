@@ -7,7 +7,7 @@ macro_rules! dbg_println {
         println!($($arg)*);
     };
 }
-
+/*
 type Color = (f64, f64, f64, f64);
 pub fn mix_color(c1: Color, c2: Color, t: f64) -> Color {
     // Clamping di t per evitare comportamenti inaspettati fuori dal range [0.0, 1.0]
@@ -24,7 +24,7 @@ pub fn mix_color(c1: Color, c2: Color, t: f64) -> Color {
 
     (r.powf(1.0/2.2), g.powf(1.0/2.2), b.powf(1.0/2.2), a)
 }
-
+*/
 
 
 

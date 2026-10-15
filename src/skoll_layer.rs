@@ -233,13 +233,6 @@ impl SkollLayer {
         }*/
     } */
 
-    pub fn update_battery_data (&mut self, _data: Option<crate::battery::BatteryStats>) {
-        /*if self.pill_container.update_data_battery(data, self.config.show_watts) {
-            self.pill_container.recalculate_normal_target();
-            self.request_redraw("pill_container animation");
-        }*/
-    }
-
     pub fn update_devices_data (&mut self, _data: Vec<BatteryDevice>) {
         /*self.batteries = data;
         self.batteries_pristine = true;

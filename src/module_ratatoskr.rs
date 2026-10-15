@@ -1,5 +1,4 @@
 use cairo::Context;
-use colored::Colorize;
 use std::collections::HashMap;
 
 use crate::config::Config;
