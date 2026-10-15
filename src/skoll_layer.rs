@@ -551,15 +551,15 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
             },
             "battery" => {
                 if let Some(info) = &data.data {
-                    let bat_symb = match info["state"].as_str() {
-                        Some("Charging") => { "󱐋" },
-                        Some("Discharging") => { "󰯆" },
-                        _ => { "󰜥" }
+                    let (bat_symb, color) = match info["state"].as_str() {
+                        Some("Charging") => { ("󱐋", get_color_gradient(data.warning)) },
+                        Some("Discharging") => { ("󰯆", get_color_gradient(data.warning.min(0.5))) },
+                        _ => { ("󰜥", get_color_gradient(data.warning)) }
                     };
                     let eta = info["eta"].as_f64().unwrap_or_default().round() as i32;
                     let h = eta / 60;
                     let m = eta % 60;
-                    let second = if eta > 0 { format!("{} {}h{}m", bat_symb, h, m) } else { "󰚥 stable".into() };
+                    let second = if eta > 0 { format!("{} {}h{}m", bat_symb, h, m) } else { bat_symb.into() };
                     toadd = Some((res.to_string(), InfoUnit::new(format!("[BAT {:.0}%] [{}]", info["percentage"].as_f64().unwrap_or(0.0), second), color)));
                 }
             },
@@ -615,9 +615,9 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
         }
     }
 
-    pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
+    /* pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
 
-        self.ratatoskr_module.update(id.to_string(), InfoUnit::new(info.clone().unwrap_or_else(||symbol.to_string()), color));
+        // self.ratatoskr_module.update(id.to_string(), InfoUnit::new(info.clone().unwrap_or_else(||symbol.to_string()), color));
         /* let mut already_present = false;
         if let Some(found) = self.icons.get(id) {
             already_present = true;
@@ -648,7 +648,7 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
             }
             IconChange::Added
         }*/IconChange::None
-    }
+    } */
 
     pub fn remove_icon(&mut self, id: &str) -> bool {
         let removed = self.icons.remove(id).is_some();

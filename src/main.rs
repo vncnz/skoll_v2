@@ -144,7 +144,7 @@ fn main() {
     );
 
     if config.hide_missing_ratatoskr == false {
-        app.add_icon("ratatoskr", "󰠗 Missing Ratatoskr", get_color_gradient(1.0), 1.0, None);
+        // app.add_icon("ratatoskr", "󰠗 Missing Ratatoskr", get_color_gradient(1.0), 1.0, None);
     }
 
     event_queue.roundtrip(&mut app).unwrap();
@@ -242,45 +242,6 @@ fn main() {
                 ("close", _) => {
                     app.close_layer();
                 },
-                ("wob", val) => {
-                    if let Ok(value) = val.parse::<f64>() {
-                        app.show_value(value, None);
-                    } else {
-                        eprintln!("Invalid wob value: {}", val);
-                    }
-                },
-                ("warning-ram", w) => {
-                    if let Ok(w) = w.parse::<f64>() {
-                        app.add_icon("demoram", "󰘚", get_color_gradient(w), w, None);
-                    }
-                },
-                ("warning-load", w) => {
-                    if let Ok(w) = w.parse::<f64>() {
-                        app.add_icon("demoload", "󰬢", get_color_gradient(w), w, None);
-                    }
-                },
-                ("warning-disk", w) => {
-                    if let Ok(w) = w.parse::<f64>() {
-                        app.add_icon("demodisk", "󰋊", get_color_gradient(w), w, None);
-                    }
-                },
-                ("devices", w) => {
-                    if let Ok(value) = w.parse::<f64>() {
-                        app.update_devices_data(vec![
-                            BatteryDevice {
-                                address: "bluetooth_demo_headphones".into(),
-                                percentage: 100.0 - (100.0 * value),
-                                name: "Demo headphones".into(),
-                                warn: value,
-                                kind: UPowerDeviceKind::Headphones,
-                                is_bluetooth: true
-                            }
-                        ]);
-                    } else {
-                        eprintln!("Invalid warn devices value: {}", w);
-                    }
-                },
-                // "󰞃"
                 _ => {
                     eprintln!("Unknown demo command: {} {}", kind, value);
                 }

@@ -10,6 +10,7 @@ Skoll is, in norse mythology, a wolf who chases the sun, causing eclipses.
 
 ## TODO list
 
+- Optimize reset_options computation time
 - Make Niri integration optional
 - Make accent color configurable
 - Make background opacity / color configurable
