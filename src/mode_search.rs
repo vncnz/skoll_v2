@@ -118,6 +118,7 @@ impl LauncherModule for Search {
         }
     }
 
+    /// Update the query, reset candidate options, requires UI redraw
     fn update_query (&mut self, query: &str) {
         self.query = query.to_string();
         self.results = get_apps(&self.apps, &self.query);
@@ -129,15 +130,6 @@ impl LauncherModule for Search {
     fn draw (&mut self, _config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
 
         eprintln!("{} {:?}", "DRAWING SEARCH".green(), self.query);
-
-        self.dirty_ui = false;
-
-        /* let (layout, sizes) = cr_text_layout(&cr, &mode_text, 18.0, None).unwrap();
-        let color = (1.0, 1.0, 1.0, 1.0);
-        self.base.set_layout(layout, sizes, mode_text.into(), color);
-
-        
-        self.base.draw_aligned(cr, 200.0, rect_height, sep - 200.0, y, pango::Alignment::Right); */
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.set_font_size(18.0);
@@ -188,18 +180,13 @@ impl LauncherModule for Search {
             cr_text_aligned(cr, "No results".into(), X_POINT + 80.0, Y_POINT, 0.0, 0.0);
         }
 
-        // cr_text_aligned(cr, result_text.clone(), sep + 20.0, y, 0.0, 0.0);
-
-        /* let (layout, sizes) = cr_text_layout(&cr, &result_text, 18.0, None).unwrap();
-        let color = (1.0, 1.0, 1.0, 1.0);
-        self.base.set_layout(layout, sizes, result_text.into(), color);
-
-        
-        self.base.draw_aligned(cr, 200.0, rect_height, sep + 20.0, y, pango::Alignment::Left); */
+        self.dirty_ui = false;
     }
 }
 
 impl Search {
+
+    /// Draw the single query result on the cairo::Context
     fn draw_app_result (&mut self, cr: &Context, idx: usize, plain: bool, x: f64, y: f64, color: (f64, f64, f64, f64)) -> (f64, f64) {
         let entry: &AppEntry = &self.results[idx];
         let (s1, s2) = if plain {
@@ -221,17 +208,18 @@ impl Search {
         (36.0 + xt + 2.0 + xt1, yt.max(yt1))
     }
 
-
+    /// Recalc options for candidate-for-launch application
     fn reset_options (&mut self) {
         self.option_index = 0;
-        let key = &self.results[self.results_index].appid;
-        if self.niri_windows.contains_key(key) {
-            self.options = vec!["[new]".to_string()];
-            for w in self.niri_windows.get(key).expect("niri_windows missing key") {
-                self.options.push(format!("[ws {}]", w.workspace_id));
+        self.options = vec![];
+        if self.results_index < self.results.len() {
+            let key = &self.results[self.results_index].appid;
+            if self.niri_windows.contains_key(key) {
+                self.options.push("[new]".to_string());
+                for w in self.niri_windows.get(key).expect("niri_windows missing key") {
+                    self.options.push(format!("[ws {}]", w.workspace_id));
+                }
             }
-        } else {
-            self.options = vec![];
         }
     }
 }

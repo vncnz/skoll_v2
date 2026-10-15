@@ -34,6 +34,7 @@ mod launcher_ui;
 mod mode_calculator;
 mod mode_search;
 mod launcher_data;
+mod module_ratatoskr;
 
 use config::Config;
 // use chrono;

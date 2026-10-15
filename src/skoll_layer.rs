@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::Config, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, utils::{TweenState, log_to_file}};
+use crate::{config::Config, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, module_ratatoskr::{InfoUnit, RatatoskrModule}, utils::{TweenState, log_to_file}};
 
 use crate::launcher_ui::Launcher;
 
@@ -69,7 +69,8 @@ pub struct SkollLayer {
     pub(crate) layer_visible: bool,
     pub(crate) keyboard: Option<wl_keyboard::WlKeyboard>,
     pub(crate) keyboard_focus: bool,
-    pub(crate) launcher: Launcher
+    pub(crate) launcher: Launcher,
+    pub ratatoskr_module: RatatoskrModule
 
 }
 
@@ -132,7 +133,8 @@ impl SkollLayer {
             layer_visible: true,
             keyboard: None,
             keyboard_focus: false,
-            launcher: Launcher::new()
+            launcher: Launcher::new(),
+            ratatoskr_module: RatatoskrModule::new()
         }
     }
 
@@ -251,6 +253,9 @@ impl SkollLayer {
         if self.launcher.needs_redraw() {
             self.needs_redraw = true;
         }
+        if self.ratatoskr_module.needs_redraw() {
+            self.needs_redraw = true;
+        }
         /*if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
             self.needs_redraw = true;
             // eprintln!("=============== DIRTY PILL ============");
@@ -351,6 +356,7 @@ impl SkollLayer {
 
                 self.draw_background(cr.clone());
                 self.draw_launcher(&cr);
+                self.draw_ratatoskr(&cr);
 
                 // self.draw_myframe(cr.clone());
 
@@ -391,9 +397,15 @@ impl SkollLayer {
         if let Some(_layer) = &self.layer {
             // eprintln!("{}", "DRAWING LAUNCHER IN LAYER".green());
             // let (width, height) = layer.current_size();
-            let width = 500.0;
-            let height = 200.0;
-            self.launcher.draw(&self.config, &cr, width as f64, height as f64, 300.0, 300.0);
+            self.launcher.draw(&self.config, &cr, self.width as f64, self.height as f64, 300.0, 300.0);
+        }
+    }
+
+    fn draw_ratatoskr(&mut self, cr: &Context) {
+        if let Some(_layer) = &self.layer {
+            // eprintln!("{}", "DRAWING LAUNCHER IN LAYER".green());
+            // let (width, height) = layer.current_size();
+            self.ratatoskr_module.draw(&self.config, &cr, self.width as f64, self.height as f64);
         }
     }
 
@@ -470,90 +482,13 @@ impl SkollLayer {
         cr.set_source_rgba(0.0, 0.0, 0.0, 0.85);
         cr.rectangle(0.0, 0.0, w, h);
         cr.fill().unwrap();
-
-        /* if let Some((r, g, b, a)) = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None,
-        } {
-            cr.fill_preserve().unwrap();
-            cr.set_line_width(1.0);
-            cr.set_source_rgba(r, g, b, a);
-            // rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
-            cr.stroke().unwrap();
-        } else {
-            cr.fill().unwrap();
-        } */
-
     }
-    
-    /* fn draw_myframe(&mut self, cr: Context) {
-        // cr.set_operator(cairo::Operator::Source);
-
-        // Clear with full transparency
-        // cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
-        cr.set_operator(cairo::Operator::Clear);
-        cr.paint().unwrap();
-        cr.set_operator(cairo::Operator::Over);
-
-        // Draw rounded rectangle frame
-        let thickness = 1.0;
-        let radius = 25.0;
-        let radius2 = 4.0;
-
-        let w = self.width as f64;
-        let h = self.height as f64;
-        let w_hole = w - thickness - 2.0;
-
-        let top = thickness / 2.0;
-
-        // TODO: In the pill-ui, the hole will be always a rectangle, so we can use a simplified version of rounded_big_hole and remove the ReservedSpace stuff, don't we?
-        // TODO: In the pill-ui we can also have rounded corners as separated surfaces? We lose the ability to have a border but we "lose" a lot of memory footprint too! But what if, in the future, pill will be able to expand vertically and host big component? We'll need potentially the entire screen in the buffer, just like now.
-
-        // Outer black border + fill
-        // rounded_big_hole(&cr, thickness / 2.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
-
-        let spaces = vec![
-            // ReservedSpace { anchor: Anchor::BottomRight, width: 100.0, height: 40.0 }
-            // ReservedSpace { anchor: Anchor::BottomLeft, width: res_w, height: res_h }
-            // ReservedSpace { anchor: Anchor::TopRight, width: 90.0, height: 20.0 }
-        ];
-
-        draw_smart_border(&cr, thickness / 2.0, top, w_hole, h - thickness/2.0 - top, w / 2.0, h / 2.0, radius, radius2, &&spaces);
-
-        cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        cr.rectangle(-1.0, -1.0, w + 2.0, h + 2.0);
-
-        cr.set_source_rgba(1.0, 0.0, 0.0, 1.0);
-        
-
-        if let Some((r, g, b, a)) = match self.config.frame_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None,
-        } {
-            cr.fill_preserve().unwrap();
-            cr.set_line_width(1.0);
-            cr.set_source_rgba(r, g, b, a);
-            // rounded_big_hole(&cr, thickness / 2.0 + 1.0, top, w_hole, h - thickness - top, radius, radius2, res_w, res_h, wob_h);
-            cr.stroke().unwrap();
-        } else {
-            cr.fill().unwrap();
-        }
-    } */
 }
 
 impl SkollLayer { // This is for icon/stuff management, I like to keep it separated
     pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
 
+        self.ratatoskr_module.update(id.to_string(), InfoUnit::new(info.clone().unwrap_or_else(||symbol.to_string()), color));
         /* let mut already_present = false;
         if let Some(found) = self.icons.get(id) {
             already_present = true;

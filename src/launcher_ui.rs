@@ -3,7 +3,7 @@ use std::time::Instant;
 use cairo::Context;
 use colored::Colorize;
 
-use crate::{config::Config, mode_calculator::Calculator, mode_search::Search};
+use crate::{config::Config, mode_calculator::Calculator, mode_search::Search, utils::{cr_color, cr_text_aligned}};
 
 pub static X_POINT: f64 = 600.0;
 pub static Y_POINT: f64 = 200.0;
