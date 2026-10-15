@@ -1,7 +1,7 @@
 use serde_derive::Deserialize;
 use std::process::Command;
-use std::collections::HashMap;
-use std::error::Error;
+
+use crate::time_of_scope::TimeOfScope;
 
 #[derive(Deserialize,Debug,Clone)]
 pub struct NiriWindow {
@@ -13,7 +13,7 @@ pub struct NiriWindow {
     pub is_urgent: bool
 }
 
-#[derive(Deserialize,Debug)]
+/* #[derive(Deserialize,Debug)]
 pub struct NiriWorkspace {
     pub id: u8,
     pub idx: u32,
@@ -22,9 +22,30 @@ pub struct NiriWorkspace {
     pub is_active: bool,
     pub is_focused: bool,
     pub active_window_id: Option<u32>
+} */
+
+#[derive(Deserialize)]
+struct FocusedOutput {
+    name: String,
+}
+
+pub fn get_focused_output_name() -> Option<String> {
+    let output = Command::new("niri")
+        .args(["msg", "-j", "focused-output"])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    serde_json::from_slice::<FocusedOutput>(&output.stdout)
+        .ok()
+        .map(|output| output.name)
 }
 
 pub fn get_niri_windows () -> Vec<NiriWindow> {
+    let _time = TimeOfScope::new("get_niri_windows");
     // (Vec::new(), HashMap::new())
     let output = Command::new("niri").arg("msg").arg("-j").arg("windows").output();
     let stdout = String::from_utf8(output.unwrap().stdout).unwrap();

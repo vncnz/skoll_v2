@@ -13,6 +13,7 @@ use std::process::Command;
 use std::os::unix::process::CommandExt;
 
 use crate::log_to_file;
+use crate::time_of_scope::TimeOfScope;
 use fuzzy_matcher::FuzzyMatcher;
 
 #[derive(Debug, Clone)]
@@ -63,7 +64,8 @@ pub struct LaunchStats {
 pub type LaunchHistory = HashMap<String, LaunchStats>;
 
 fn app_key(app: &AppEntry) -> String {
-    format!("{}::{}", app.exec, app.name)
+    let s = format!("{}::{}", app.exec, app.name);
+    s
 }
 
 pub fn record_app_launch(app: &AppEntry, history: &mut LaunchHistory, at: DateTime<Utc>) {
@@ -138,6 +140,7 @@ pub fn load_launch_history(path: &PathBuf) -> Result<LaunchHistory, Box<dyn Erro
 }
 
 pub fn load_app_entries() -> Result<Vec<AppEntry>, Box<dyn Error>> {
+    let _time = TimeOfScope::new("oload_app_entries");
 
     let mut results = vec![];
     let locales = get_languages_from_env();
@@ -174,7 +177,7 @@ fn resolve_icon_path(icon_name: String) -> Option<PathBuf> {
 }
 
 pub fn get_apps (apps_entries: &Vec<AppEntry>, filter: &String) -> Vec<AppEntry> {
-    // TODO: Stuff to be cached...
+    let _time = TimeOfScope::new("get_apps");
 
     /* let mut apps_entries: Vec<AppEntry> = vec![];
     if apps_entries.len() == 0 {

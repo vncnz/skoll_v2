@@ -113,7 +113,7 @@ pub fn log_to_file(msg: String) {
 
 use std::time::{Duration, Instant};
 
-use cairo::{Context, ImageSurface};
+use cairo::Context;
 
 /* ANIMATION SYSTEM */
 
@@ -540,7 +540,7 @@ pub fn rounded_big_hole (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r
 
 
 // use cairo::Context;
-use std::f64::consts::PI;
+// use std::f64::consts::PI;
 
 #[derive(PartialEq)]
 pub enum Anchor {
@@ -550,13 +550,13 @@ pub enum Anchor {
     LeftCenter,
 }
 
-pub struct ReservedSpace {
+/* pub struct ReservedSpace {
     pub anchor: Anchor,
     pub width: f64,
     pub height: f64,
-}
+} */
 
-pub enum Side { Top, Bottom, Left, Right }
+// pub enum Side { Top, Bottom, Left, Right }
 
 /// Disegna un notch fluido composto da 4 archi.
 /// - `side`: il lato su cui si trova.
@@ -564,7 +564,7 @@ pub enum Side { Top, Bottom, Left, Right }
 /// - `depth`: quanto rientra verso l'interno dello schermo.
 /// - `width`: la larghezza totale della base del notch.
 /// - `r`: il raggio di curvatura (r2 nel tuo codice originale).
-fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, depth: f64, r: f64) {
+/* fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, depth: f64, r: f64) {
     let r = r.min(depth / 2.0).min(width / 4.0);
     let half_w = width / 2.0;
 
@@ -618,7 +618,7 @@ fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, d
             cr.arc(x_edge + r, y_end - r, r, 0.5 * PI, PI);
         }
     }
-}
+} */
 
 /*pub fn draw_frame(cr: &Context, x: f64, y: f64, w: f64, h: f64, r_base: f64, r_notch: f64, spaces: &[ReservedSpace]) {
     cr.new_sub_path();
@@ -651,7 +651,7 @@ fn add_notch(cr: &Context, side: Side, center: f64, edge_pos: f64, width: f64, d
 }
 */
 
-pub fn draw_smart_border(
+/* pub fn draw_smart_border(
     cr: &Context, 
     x: f64, y: f64, w: f64, h: f64, xc: f64, yc: f64,
     r_base: f64, 
@@ -717,7 +717,7 @@ pub fn draw_smart_border(
     }
 
     cr.close_path();
-}
+} */
 
 
 
@@ -729,7 +729,7 @@ pub fn draw_smart_border(
 
 
 
-
+/*
 pub enum GradientDirection {
     #[allow(unused)]
     Vertical,
@@ -799,6 +799,7 @@ pub fn rounded_rect_gradient(
         cr.fill().unwrap();
     }
 }
+*/
 
 /* pub fn rounded_rect_no_gradient (
     cr: &Context,

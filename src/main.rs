@@ -6,7 +6,7 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput}};
 
-use std::{sync::mpsc::{self, Receiver, Sender}, time::{Duration, Instant}};
+use std::{sync::mpsc::{self, Receiver, Sender}, time::Duration};
 
 use std::panic;
 use std::thread;
@@ -14,16 +14,12 @@ use std::thread;
 use colored::Colorize;
 
 use crate::{
-    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, utils::{get_color_gradient, log_to_file, select_icon}
+    battery::{BatteryState, BatteryStats}, commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, time_of_scope::TimeOfScope, utils::{get_color_gradient, log_to_file, select_icon}
 };
 
 mod data;
 mod config;
-// mod skoll_layer;
-// mod skoll_layer_old;
-//mod clock;
-//mod clock1;
-//mod clock2;
+mod time_of_scope;
 mod skoll_layer;
 mod commands;
 mod niri;
@@ -327,17 +323,13 @@ fn main() {
                         if app.layer_visible {
                             app.close_layer();
                         } else {
-                            let start = Instant::now();
+                            let _time = TimeOfScope::new("open_layer");
                             app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
-                            let elapsed = Instant::now().saturating_duration_since(start);
-                            eprintln!("{} {}ms", "Layer open time:".red(), elapsed.as_millis());
                         }
                     },
                     crate::skoll_layer::LayerCommand::Open => {
-                        let start = Instant::now();
+                        let _time = TimeOfScope::new("open_layer");
                         app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
-                        let elapsed = Instant::now().saturating_duration_since(start);
-                        eprintln!("{} {}ms", "Layer open time:".red(), elapsed.as_millis());
                     },
                     crate::skoll_layer::LayerCommand::Close => {
                         app.close_layer();
@@ -349,7 +341,7 @@ fn main() {
                         println!("cmd to be parsed: {}", cmd);
                         let parts: Vec<&str> = cmd.split(" ").collect();
                         match parts.as_slice() {
-                            ["timer", value_str] => {}
+                            ["timer", _value_str] => {}
                             
                             [kind, value_str] => {
                                 match value_str.parse::<f64>() {

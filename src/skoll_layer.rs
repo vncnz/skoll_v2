@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::Config, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, module_ratatoskr::{InfoUnit, RatatoskrModule}, utils::{TweenState, log_to_file}};
+use crate::{config::Config, data::{AlarmIcon, BatteryDevice, IconChange}, dbg_println, module_ratatoskr::{InfoUnit, RatatoskrModule}, time_of_scope::TimeOfScope, utils::{TweenState, log_to_file}};
 
 use crate::launcher_ui::Launcher;
 
@@ -141,21 +141,29 @@ impl SkollLayer {
     }
 
     fn choose_output(&self) -> Option<wayland_client::protocol::wl_output::WlOutput> {
-        let mut chosen_output = None;
+        let _time = TimeOfScope::new("choose_output");
+        let focused_output = crate::niri::get_focused_output_name();
+        let mut first_output = None;
+        let mut internal_output = None;
+
         for output in self.output_state.outputs() {
+            if first_output.is_none() {
+                first_output = Some(output.clone());
+            }
+
             if let Some(info) = self.output_state.info(&output) {
                 if let Some(name) = info.name {
-                    if name.starts_with("eDP") {
-                        chosen_output = Some(output.clone());
-                        break;
+                    if focused_output.as_deref() == Some(name.as_str()) {
+                        return Some(output.clone());
+                    }
+                    if name.starts_with("eDP") && internal_output.is_none() {
+                        internal_output = Some(output.clone());
                     }
                 }
             }
-            if chosen_output.is_none() {
-                chosen_output = Some(output.clone());
-            }
         }
-        chosen_output
+
+        internal_output.or(first_output)
     }
 
     pub fn open_layer(
