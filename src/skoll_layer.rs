@@ -25,11 +25,13 @@ static mut AVG_CNT: i64 = 0-5;
 pub enum LayerCommand {
     Open,
     Close,
+    Toggle
 }
 
 impl LayerCommand {
     pub fn from_input(cmd: &str) -> Option<Self> {
         match cmd.trim().to_ascii_lowercase().as_str() {
+            "toggle" => Some(Self::Toggle),
             "open" => Some(Self::Open),
             "close" | "closed" | "hide" => Some(Self::Close),
             _ => None,

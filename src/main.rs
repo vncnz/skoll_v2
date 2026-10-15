@@ -241,6 +241,13 @@ fn main() {
         // Dispatch demo events
         if let Ok((kind, value)) = demo_rx.try_recv() {
             match (kind.as_str(), value.as_str()) {
+                ("toggle", _) => {
+                    if app.layer_visible {
+                        app.close_layer();
+                    } else {
+                        app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
+                    }
+                },
                 ("open", _) => {
                     app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
                 },
@@ -316,6 +323,16 @@ fn main() {
         if let Ok(cmd) = rx_cmds.try_recv() {
             if let Some(layer_cmd) = crate::skoll_layer::LayerCommand::from_input(&cmd) {
                 match layer_cmd {
+                    crate::skoll_layer::LayerCommand::Toggle => {
+                        if app.layer_visible {
+                            app.close_layer();
+                        } else {
+                            let start = Instant::now();
+                            app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
+                            let elapsed = Instant::now().saturating_duration_since(start);
+                            eprintln!("{} {}ms", "Layer open time:".red(), elapsed.as_millis());
+                        }
+                    },
                     crate::skoll_layer::LayerCommand::Open => {
                         let start = Instant::now();
                         app.open_layer(&qh, &compositor, &layer_shell, &raw_compositor);
@@ -324,7 +341,7 @@ fn main() {
                     },
                     crate::skoll_layer::LayerCommand::Close => {
                         app.close_layer();
-                    },
+                    }
                 }
             } else {
                 match &*cmd {
