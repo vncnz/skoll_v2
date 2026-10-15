@@ -144,13 +144,7 @@ fn main() {
     );
 
     if config.hide_missing_ratatoskr == false {
-        app.add_icon("ratatoskr", "󰠗", get_color_gradient(1.0), 1.0, None);
-        /* app.animator.animate_property(
-            &app.frame_model,
-            AnimationKey::IconsHeight,
-            app.icons.len() as f64,
-            200
-        ); */
+        app.add_icon("ratatoskr", "󰠗 Missing Ratatoskr", get_color_gradient(1.0), 1.0, None);
     }
 
     event_queue.roundtrip(&mut app).unwrap();
@@ -165,8 +159,7 @@ fn main() {
 
     // The launcher surface is created on-demand when the user requests it.
     // This keeps memory usage low while idle and lets us select the output each time.
-    
-    // app.add_icon("avg", "󰬢", (1.0, 0.2, 0.2, 1.0)); // example
+
     let (tx, rx_cmds): (Sender<String>, Receiver<String>) = mpsc::channel();
     let _ = start_command_listener(tx, "/tmp/skoll_cmds");
 
@@ -258,20 +251,17 @@ fn main() {
                 },
                 ("warning-ram", w) => {
                     if let Ok(w) = w.parse::<f64>() {
-                        if w > 0.3 { app.add_icon("demoram", "󰘚", get_color_gradient(w), w, None); }
-                        else { app.remove_icon("demoram"); }
+                        app.add_icon("demoram", "󰘚", get_color_gradient(w), w, None);
                     }
                 },
                 ("warning-load", w) => {
                     if let Ok(w) = w.parse::<f64>() {
-                        if w > 0.3 { app.add_icon("demoload", "󰬢", get_color_gradient(w), w, None); }
-                        else { app.remove_icon("demoload"); }
+                        app.add_icon("demoload", "󰬢", get_color_gradient(w), w, None);
                     }
                 },
                 ("warning-disk", w) => {
                     if let Ok(w) = w.parse::<f64>() {
-                        if w > 0.3 { app.add_icon("demodisk", "󰋊", get_color_gradient(w), w, None); }
-                        else { app.remove_icon("demodisk"); }
+                        app.add_icon("demodisk", "󰋊", get_color_gradient(w), w, None);
                     }
                 },
                 ("devices", w) => {
@@ -348,8 +338,14 @@ fn main() {
             // app.request_redraw();
         }
         
-        //println!("Ricevuto: {}", msg);
         if let Ok(data) = sock.rx.try_recv() {
+            // log_to_file(format!("Received: {} {:?}", data.resource, data));
+            // recv.push(data.resource.chars().nth(0).unwrap());
+            app.process_partial_msg(data);
+        }
+
+        //println!("Ricevuto: {}", msg);
+        /* if let Ok(data) = sock.rx.try_recv() {
             // println!("{} Ricevuto: {:?}", chrono::Local::now().format("%H:%M:%S%.3f"), data.resource);
             if data.resource == "battery" {
                 // Now I'm trying to get battery infos internally!
@@ -478,7 +474,7 @@ fn main() {
                     }
                 }
             }
-        }
+        } */
 
         app.check_redraw_timeout();
         app.maybe_redraw(&qh);
