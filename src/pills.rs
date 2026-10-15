@@ -7,7 +7,7 @@ use std::{collections::HashMap, time::{Duration, Instant}};
 use colored::Colorize;
 
 use crate::{
-    config::Config, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, utils::{cr_text_layout, ease, get_color_gradient, rounded_rect_gradient, select_icon}
+    config::Config, data::{AlarmIcon, BatteryDevice, UPowerDeviceKind}, dbg_println, utils::{cr_text_layout, ease, get_color_gradient, select_icon}
 };
 
 pub static PILL_FONT_SIZE: f64 = 14.0;
