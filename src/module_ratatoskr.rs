@@ -1,9 +1,8 @@
 use cairo::Context;
 use std::collections::HashMap;
-use std::eprintln;
 
 use crate::config::Config;
-use crate::utils::{cr_color, cr_text_aligned, cr_text_aligned_pango};
+use crate::utils::{cr_color, cr_text_aligned_pango};
 
 pub struct InfoUnit {
     text: String,
@@ -24,18 +23,8 @@ pub struct RatatoskrModule {
 
 impl RatatoskrModule {
     pub fn new () -> RatatoskrModule {
-        let info0 = InfoUnit {
-            text: "test".into(),
-            color: (1.0, 0.4, 0.2, 1.0)
-        };
-        let info1 = InfoUnit {
-            text: "test1".into(),
-            color: (0.7, 0.4, 1.0, 1.0)
-        };
-        let mut info_units = HashMap::new();
-        info_units.insert("test0".into(), info0);
-        info_units.insert("test1".into(), info1);
-        let sorted_keys = vec!["test0".to_string(), "test1".to_string()];
+        let info_units = HashMap::new();
+        let sorted_keys = vec!["loadavg", "ram", "disk", "temperature", "volume", "weather", "display"].iter().map(|s| s.to_string()).collect();
         RatatoskrModule {
             info_units,
             sorted_keys,
@@ -65,7 +54,7 @@ impl RatatoskrModule {
         for key in &self.sorted_keys {
             if let Some(unit) = self.info_units.get(key) {
                 cr_color(&cr, unit.color);
-                let (lx, _) = cr_text_aligned_pango(cr, (&unit.text).into(), 10.0, xx, rect_height - 10.0, 0.0, 1.0).unwrap();
+                let (lx, _) = cr_text_aligned_pango(cr, (&unit.text).into(), 14.0, xx, rect_height - 10.0, 0.0, 1.0).unwrap();
                 // let (lx, _) = cr_text_aligned(cr, (&unit.text).into(), xx, rect_height - 10.0, 0.0, 1.0);
                 xx += lx + 8.0;
             }
