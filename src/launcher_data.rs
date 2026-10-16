@@ -140,7 +140,7 @@ pub fn load_launch_history(path: &PathBuf) -> Result<LaunchHistory, Box<dyn Erro
 }
 
 pub fn load_app_entries() -> Result<Vec<AppEntry>, Box<dyn Error>> {
-    let _time = TimeOfScope::new("oload_app_entries");
+    let _time = TimeOfScope::new("load_app_entries");
 
     let mut results = vec![];
     let locales = get_languages_from_env();

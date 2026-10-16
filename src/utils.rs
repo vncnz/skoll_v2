@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 
 #[macro_export]
@@ -436,19 +438,72 @@ pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64, max_width: Optio
     Ok((layout, (w, h)))
 }
 
-pub fn cr_draw_image (cr: &Context, path: PathBuf, x: f64, y: f64, width: f64, height: f64) {
-    if width <= 0.0 || height <= 0.0 || !path.is_file() {
-        return;
+const ICON_CACHE_MAX_ENTRIES: usize = 128;
+const ICON_CACHE_MAX_TARGET_SIZE: f64 = 64.0;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct IconCacheKey {
+    path: PathBuf,
+    width: u32,
+    height: u32,
+}
+
+fn should_cache_icon_target(width: f64, height: f64) -> bool {
+    width > 0.0
+        && height > 0.0
+        && width <= ICON_CACHE_MAX_TARGET_SIZE
+        && height <= ICON_CACHE_MAX_TARGET_SIZE
+}
+
+#[derive(Default)]
+struct IconCacheStore {
+    surfaces: HashMap<IconCacheKey, cairo::ImageSurface>,
+    order: VecDeque<IconCacheKey>,
+}
+
+impl IconCacheStore {
+    fn touch(&mut self, key: &IconCacheKey) {
+        self.order.retain(|candidate| candidate != key);
+        self.order.push_back(key.clone());
     }
 
-    let Ok(img) = image::open(&path) else {
-        return;
+    fn insert(&mut self, key: IconCacheKey, surface: cairo::ImageSurface) {
+        self.order.retain(|candidate| candidate != &key);
+        self.order.push_back(key.clone());
+        self.surfaces.insert(key, surface);
+
+        while self.surfaces.len() > ICON_CACHE_MAX_ENTRIES {
+            let Some(oldest) = self.order.pop_front() else {
+                break;
+            };
+            self.surfaces.remove(&oldest);
+        }
+    }
+}
+
+thread_local! {
+    static ICON_CACHE: RefCell<IconCacheStore> = RefCell::new(IconCacheStore::default());
+}
+
+fn paint_icon_surface(cr: &Context, surface: &cairo::ImageSurface, x: f64, y: f64, width: f64, height: f64) {
+    cr.save().unwrap();
+    cr.set_operator(cairo::Operator::Over);
+    cr.rectangle(x, y, width, height);
+    cr.clip();
+    cr.set_source_surface(surface, x, y).unwrap();
+    cr.paint().unwrap();
+    cr.restore().unwrap();
+}
+
+fn render_icon_surface(path: &PathBuf, width: u32, height: u32) -> Option<cairo::ImageSurface> {
+    let Ok(img) = image::open(path) else {
+        return None;
     };
 
-    let rgba = img.to_rgba8();
+    let rgba = img.resize_exact(width, height, image::imageops::FilterType::Lanczos3).to_rgba8();
     let (img_w, img_h) = rgba.dimensions();
     if img_w == 0 || img_h == 0 {
-        return;
+        return None;
     }
 
     let mut premultiplied = Vec::with_capacity((img_w * img_h * 4) as usize);
@@ -465,29 +520,60 @@ pub fn cr_draw_image (cr: &Context, path: PathBuf, x: f64, y: f64, width: f64, h
         .stride_for_width(img_w)
         .expect("failed to compute cairo stride for image");
 
-    let Ok(surface) = cairo::ImageSurface::create_for_data(
+    let surface = cairo::ImageSurface::create_for_data(
         premultiplied,
         cairo::Format::ARgb32,
         img_w as i32,
         img_h as i32,
         stride,
-    ) else {
+    )
+    .ok()?;
+
+    Some(surface)
+}
+
+pub fn cr_draw_image (cr: &Context, path: &PathBuf, x: f64, y: f64, width: f64, height: f64) {
+    if width <= 0.0 || height <= 0.0 || !path.is_file() {
+        return;
+    }
+
+    let target_w = width.round() as u32;
+    let target_h = height.round() as u32;
+    if target_w == 0 || target_h == 0 {
+        return;
+    }
+
+    if should_cache_icon_target(width, height) {
+        let key = IconCacheKey {
+            path: path.clone(),
+            width: target_w,
+            height: target_h,
+        };
+
+        ICON_CACHE.with(|cache| {
+            let mut cache = cache.borrow_mut();
+            cache.touch(&key);
+            if let Some(surface) = cache.surfaces.get(&key) {
+                paint_icon_surface(cr, surface, x, y, width, height);
+                return;
+            }
+
+            let Some(surface) = render_icon_surface(path, target_w, target_h) else {
+                return;
+            };
+
+            cache.insert(key.clone(), surface);
+            let surface = cache.surfaces.get(&key).unwrap();
+            paint_icon_surface(cr, surface, x, y, width, height);
+        });
+        return;
+    }
+
+    let Some(surface) = render_icon_surface(path, target_w, target_h) else {
         return;
     };
 
-    let scale = (width / img_w as f64).min(height / img_h as f64);
-    let scaled_w = img_w as f64 * scale;
-    let scaled_h = img_h as f64 * scale;
-
-    cr.save().unwrap();
-    cr.set_operator(cairo::Operator::Over);
-    cr.rectangle(x, y, width, height);
-    cr.clip();
-    cr.translate(x + (width - scaled_w) / 2.0, y + (height - scaled_h) / 2.0);
-    cr.scale(scale, scale);
-    cr.set_source_surface(&surface, 0.0, 0.0).unwrap();
-    cr.paint().unwrap();
-    cr.restore().unwrap();
+    paint_icon_surface(cr, &surface, x, y, width, height);
 }
 
 /* use pango::{FontDescription, Gravity, WrapMode, SCALE};
@@ -967,7 +1053,7 @@ mod tests {
         cr.fill().unwrap();
 
         cr.set_operator(cairo::Operator::Source);
-        cr_draw_image(&cr, path.clone(), 5.0, 5.0, 4.0, 4.0);
+        cr_draw_image(&cr, &path, 5.0, 5.0, 4.0, 4.0);
 
         drop(cr);
 
@@ -979,5 +1065,12 @@ mod tests {
 
         assert!(inside_pixel.iter().any(|&byte| byte > 0), "image should have painted at least one visible pixel in its target box");
         assert!(outside_pixel[1] > 0, "semi-transparent layer should still show the green background under the image");
+    }
+
+    #[test]
+    fn icon_cache_keeps_only_small_draw_targets() {
+        assert!(should_cache_icon_target(20.0, 20.0));
+        assert!(should_cache_icon_target(48.0, 48.0));
+        assert!(!should_cache_icon_target(256.0, 256.0));
     }
 }

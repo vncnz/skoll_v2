@@ -182,7 +182,7 @@ impl Launcher {
     } */
 
     pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
-        let _time = TimeOfScope::new("Layer draw time");
+        let _time = TimeOfScope::new("launcher draw");
         match self.mode {
             LauncherMode::Calculator => self.calculator.draw(config, cr, rect_width, rect_height, x, y),
             LauncherMode::Search => self.search.draw(config, cr, rect_width, rect_height, x, y)

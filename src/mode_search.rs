@@ -6,6 +6,7 @@ use crate::config::Config;
 use crate::launcher_data::{AppEntry, launch_detached, update_launch_history};
 use crate::launcher_ui::{LauncherModule, X_POINT, Y_POINT};
 use crate::niri::{NiriWindow, focus_niri_window, get_niri_windows};
+use crate::time_of_scope::TimeOfScope;
 use crate::utils::{cr_draw_image, cr_text_aligned, cr_color};
 use crate::launcher_data::{load_app_entries, get_apps};
 
@@ -176,6 +177,7 @@ impl Search {
 
     /// Draw the single query result on the cairo::Context
     fn draw_app_result (&mut self, cr: &Context, idx: usize, plain: bool, x: f64, y: f64, color: (f64, f64, f64, f64)) -> (f64, f64) {
+        let _timer = TimeOfScope::new(format!("draw_app_result {idx} {plain}"));
         let entry: &AppEntry = &self.results[idx];
         let (s1, s2) = if plain {
             ("".to_string(), entry.name.clone())
@@ -191,7 +193,8 @@ impl Search {
         let (xt1, yt1) = cr_text_aligned(cr, s2, x + 36.0 + xt + 2.0, y, 0.0, 0.0);
 
         if let Some(icon_path) = entry.icon_path.as_ref() {
-            cr_draw_image(&cr, icon_path.clone(), x + 10.0, y - 16.0, 20.0, 20.0);
+            cr_draw_image(&cr, &icon_path, x + 10.0, y - 16.0, 20.0, 20.0);
+            // eprintln!("{icon_path:?}");
         }
         (36.0 + xt + 2.0 + xt1, yt.max(yt1))
     }
