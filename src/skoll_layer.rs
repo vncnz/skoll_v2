@@ -120,7 +120,7 @@ impl SkollLayer {
             // battery_integrated: None,
             needs_redraw: true,
             last_redraw: Instant::now(),
-            redraw_interval: [Duration::from_millis(16), Duration::from_millis(60_000)],
+            redraw_interval: [Duration::from_millis(16), Duration::from_millis(2_000)],
             buffers: [None, None],
             current_buffer_idx: 0,
             config,
@@ -254,10 +254,9 @@ impl SkollLayer {
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
         // eprintln!("{} {:?}", "MAYBE REDRAW".green(), self.needs_redraw);
-        if self.launcher.needs_redraw() {
-            self.needs_redraw = true;
-        }
-        if self.ratatoskr_module.needs_redraw() {
+        if self.launcher.needs_redraw()
+        || self.ratatoskr_module.needs_redraw()
+        || self.last_redraw.elapsed() > self.redraw_interval[1] {
             self.needs_redraw = true;
         }
         /*if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
