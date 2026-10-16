@@ -25,7 +25,7 @@ Resource data (such as CPU, RAM, and disk usage) is retrieved via a Unix socket 
 
 Ratatoskr **will be** optional: if you choose not to run it, Skoll will not display resource warnings (for example, high CPU/RAM usage).
 
-Initially, I implemented the previous version of Skoll using the GTK toolkit, but it was consuming a lot of RAM and it was really slow to show up. So I made good use of what I learnt writing Heimdallr (another project of mine), and I rewrote skoll from stratch, communicating directly with Wayland and using cairo as graphical library. With this approach, memory usage dropped to approximately 35 MB on my laptop when layer is closed, 53 MB when layer is open.
+Initially, I implemented the previous version of Skoll using the GTK toolkit, but it was consuming a lot of RAM and it was really slow to show up. So I made good use of what I learnt writing [Heimdallr](https://github.com/vncnz/heimdallr) (another project of mine) and [Fenrir](https://github.com/vncnz/fenrir) (my TUI launcher), and I rewrote skoll from stratch, communicating directly with Wayland and using cairo as graphical library. With this approach, memory usage dropped to approximately 35 MB on my laptop when layer is closed, 53 MB when layer is open.
 The impact on average load is around... well, 0.01 tops with layer open and compulsive keyboard interaction, so really small. I measured the impact on average load as the ratio between the time spent with the Skoll process in "Running" or "disk-sleep" status and the total measurement time.
 
 ## Technical
