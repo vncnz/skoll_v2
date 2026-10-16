@@ -177,7 +177,6 @@ impl Search {
 
     /// Draw the single query result on the cairo::Context
     fn draw_app_result (&mut self, cr: &Context, idx: usize, plain: bool, x: f64, y: f64, color: (f64, f64, f64, f64)) -> (f64, f64) {
-        let _timer = TimeOfScope::new(format!("draw_app_result {idx} {plain}"));
         let entry: &AppEntry = &self.results[idx];
         let (s1, s2) = if plain {
             ("".to_string(), entry.name.clone())
