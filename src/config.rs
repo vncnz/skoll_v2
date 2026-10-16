@@ -8,7 +8,23 @@ fn default_show_devices_battery_max_level() -> f64 {
 }
 
 fn default_background_color() -> (f64, f64, f64, f64) {
-    (0.0, 0.0, 0.0, 1.0)
+    (0.0, 0.0, 0.0, 0.85)
+}
+
+fn default_accent_color() -> (f64, f64, f64, f64) {
+    (1.0, 0.2, 0.5, 1.0)
+}
+
+fn default_frame_color() -> FrameColor {
+    FrameColor::None
+}
+
+fn default_hide_missing_ratatoskr() -> bool {
+    false
+}
+
+fn default_show_watts() -> bool {
+    false
 }
 
 #[derive(Debug, Clone)]
@@ -67,14 +83,26 @@ impl<'de> Deserialize<'de> for FrameColor {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(default)]
 pub struct Config {
+    #[serde(default = "default_frame_color")]
     pub frame_color: FrameColor,
+    #[serde(default = "default_show_devices_battery_max_level")]
     pub show_devices_battery_max_level: f64,
+    #[serde(default = "default_hide_missing_ratatoskr")]
     pub hide_missing_ratatoskr: bool,
+    #[serde(default = "default_show_watts")]
     pub show_watts: bool,
-    #[serde(deserialize_with = "deserialize_background_color")]
+    #[serde(
+        default = "default_background_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub background_color: (f64, f64, f64, f64),
+
+    #[serde(
+        default = "default_accent_color",
+        deserialize_with = "deserialize_color"
+    )]
+    pub accent_color: (f64, f64, f64, f64),
 }
 
 impl Default for Config {
@@ -85,11 +113,12 @@ impl Default for Config {
             hide_missing_ratatoskr: false,
             show_watts: false,
             background_color: default_background_color(),
+            accent_color: default_accent_color(),
         }
     }
 }
 
-fn deserialize_background_color<'de, D>(
+fn deserialize_color<'de, D>(
     deserializer: D,
 ) -> Result<(f64, f64, f64, f64), D::Error>
 where

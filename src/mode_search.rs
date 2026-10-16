@@ -116,7 +116,7 @@ impl LauncherModule for Search {
         self.dirty_ui = true;
     }
 
-    fn draw (&mut self, _config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
+    fn draw (&mut self, config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
 
         eprintln!("{} {:?}", "DRAWING SEARCH".green(), self.query);
 
@@ -124,7 +124,7 @@ impl LauncherModule for Search {
         cr.set_font_size(18.0);
         cr_text_aligned(cr, "execute".into(), X_POINT, Y_POINT, 1.0, 0.0);
 
-        let accent = (1.0, 0.2, 0.5, 1.0);
+        // let accent = (1.0, 0.2, 0.5, 1.0);
         // let white = (1.0, 1.0, 1.0, 1.0);
         let gray0 = (0.7, 0.7, 0.7, 1.0);
         let gray1 = (0.5, 0.5, 0.5, 1.0);
@@ -147,7 +147,7 @@ impl LauncherModule for Search {
             let mut xx = X_POINT + xt + 20.0;
             let opts = self.options.len();
             for opt in 0..opts {
-                cr_color(&cr, if self.option_index == opt { accent } else { gray1 });
+                cr_color(&cr, if self.option_index == opt { config.accent_color } else { gray1 });
                 let (lx, _) = cr_text_aligned(cr, self.options[opt].clone().into(), xx, Y_POINT, 0.0, 0.0);
                 xx += lx + 8.0;
             }
