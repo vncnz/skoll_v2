@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::Config, data::{AlarmIcon, BatteryDevice, BluetoothStats, IconChange, PartialMsg, UPowerDeviceKind}, dbg_println, module_ratatoskr::{InfoUnit, RatatoskrModule}, time_of_scope::TimeOfScope, utils::{TweenState, get_color_gradient, log_to_file}};
+use crate::{config::Config, data::{AlarmIcon, BatteryDevice, BluetoothStats, IconChange, PartialMsg, UPowerDeviceKind}, dbg_println, module_ratatoskr::{InfoUnit, RatatoskrModule}, time_of_scope::TimeOfScope, utils::{TweenState, cr_color, get_color_gradient, log_to_file}};
 
 use crate::launcher_ui::Launcher;
 
@@ -483,7 +483,7 @@ impl SkollLayer {
         
         // cr.set_fill_rule(cairo::FillRule::EvenOdd);
 
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.85);
+        cr_color(&cr, self.config.background_color);
         cr.rectangle(0.0, 0.0, w, h);
         cr.fill().unwrap();
     }
