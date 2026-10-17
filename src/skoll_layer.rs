@@ -133,7 +133,7 @@ impl SkollLayer {
             batteries_pristine: false,
             // pill_container: pill,
             pills_are_animating: false,
-            layer_visible: true,
+            layer_visible: false,
             keyboard: None,
             keyboard_focus: false,
             launcher: Launcher::new(),
