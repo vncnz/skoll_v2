@@ -87,6 +87,9 @@ impl LauncherModule for Search {
     }
 
     fn key_enter (&mut self) {
+        if self.results_index >= self.results.len() {
+            return;
+        }
         let entry: &AppEntry = &self.results[self.results_index];
         eprintln!("{} {:?}", "ENTER PRESSED".yellow(), entry);
         eprintln!("self.option_index: {}", self.option_index);
