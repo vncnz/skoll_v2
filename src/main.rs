@@ -171,10 +171,10 @@ fn main() {
         dbg_println!("{}", "Battery listener OK".green().to_string());
     }); */
 
-    let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
+    // let (demo_tx, demo_rx) = mpsc::channel::<(String, String)>();
 
 
-    #[cfg(debug_assertions)]
+    /* #[cfg(debug_assertions)]
     if true {
         thread::spawn(move || {
             let actions: Vec<(&str, &str, Duration)> = vec![
@@ -198,7 +198,7 @@ fn main() {
                 let _ = demo_tx.send((kind.to_string(), value.to_string()));
             }
         });
-    }
+    } */
 
 
     loop {
@@ -227,7 +227,7 @@ fn main() {
         let _ = event_queue.dispatch_pending(&mut app);
 
         // Dispatch demo events
-        if let Ok((kind, value)) = demo_rx.try_recv() {
+        /* if let Ok((kind, value)) = demo_rx.try_recv() {
             match (kind.as_str(), value.as_str()) {
                 ("toggle", _) => {
                     if app.layer_visible {
@@ -246,7 +246,7 @@ fn main() {
                     eprintln!("Unknown demo command: {} {}", kind, value);
                 }
             }
-        }
+        } */
 
         if let Ok(cmd) = rx_cmds.try_recv() {
             if let Some(layer_cmd) = crate::skoll_layer::LayerCommand::from_input(&cmd) {
