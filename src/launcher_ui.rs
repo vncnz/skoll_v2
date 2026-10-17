@@ -9,12 +9,12 @@ pub trait LauncherModule {
     // fn recalc (&mut self);
     fn new () -> Self where Self: Sized;
     fn needs_redraw (&self) -> bool;
-    fn on_activate (&mut self);
+    fn on_activate (&mut self, query: &str);
     fn key_tab (&mut self);
     fn key_home (&mut self);
     fn key_down (&mut self);
     fn key_up (&mut self);
-    fn key_enter (&mut self);
+    fn key_enter (&mut self) -> bool;
     // fn needs_recalc (&self) -> bool;
     fn update_query (&mut self, query: &str);
     fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64);
@@ -140,21 +140,28 @@ impl Launcher {
     } */
 
     forward_key!(
-        on_activate(),
         key_tab(),
         key_home(),
         key_down(),
-        key_up(),
-        key_enter()
+        key_up()
         // key_char(c: char), key_arrow(dir: Arrow),
     );
 
-    /* pub fn on_activate (&mut self) {
+    pub fn on_activate (&mut self) {
+        self.query = String::new();
         match self.mode {
-            LauncherMode::Search => self.search.on_activate(),
-            LauncherMode::Calculator => self.calculator.on_activate()
+            LauncherMode::Search => self.search.on_activate(&self.query),
+            LauncherMode::Calculator => self.calculator.on_activate(&self.query)
         };
-    } */
+    }
+
+    pub fn key_enter (&mut self) -> bool {
+        self.query = String::new();
+        match self.mode {
+            LauncherMode::Search => self.search.key_enter(),
+            LauncherMode::Calculator => self.calculator.key_enter()
+        }
+    }
 
     /* pub fn key_tab (&mut self) {
         match self.mode {

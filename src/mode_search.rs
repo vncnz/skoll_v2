@@ -40,7 +40,7 @@ impl LauncherModule for Search {
         self.dirty_ui
     }
 
-    fn on_activate (&mut self) {
+    fn on_activate (&mut self, query: &str) {
         let windows = get_niri_windows();
         // eprintln!("{windows:?}");
         let mut windows_map: HashMap<String,Vec<NiriWindow>> = HashMap::new();
@@ -54,7 +54,7 @@ impl LauncherModule for Search {
         // eprintln!("{windows_map:?}");
         self.niri_windows = windows_map;
         // self.results_index = 0;
-        self.update_query("");
+        self.update_query(query);
         self.reset_options();
     }
 
@@ -86,9 +86,9 @@ impl LauncherModule for Search {
         }
     }
 
-    fn key_enter (&mut self) {
+    fn key_enter (&mut self) -> bool {
         if self.results_index >= self.results.len() {
-            return;
+            return false;
         }
         let entry: &AppEntry = &self.results[self.results_index];
         eprintln!("{} {:?}", "ENTER PRESSED".yellow(), entry);
@@ -108,6 +108,7 @@ impl LauncherModule for Search {
             let _ = launch_detached(&entry.exec);
             eprintln!("launch_detached ran!");
         }
+        true
     }
 
     /// Update the query, reset candidate options, requires UI redraw

@@ -821,8 +821,8 @@ impl KeyboardHandler for SkollLayer {
             if is_escape_key(u32::from(event.keysym)) {
                 self.close_layer();
             } else if is_enter_key(u32::from(event.keysym)) {
-                self.launcher.key_enter();
-                self.close_layer();
+                let to_close = self.launcher.key_enter();
+                if to_close { self.close_layer(); }
             } else if event.keysym == keysyms::KEY_BackSpace.into() {
                 self.launcher.key_backspace();
             } else if event.keysym == keysyms::KEY_Delete.into() {

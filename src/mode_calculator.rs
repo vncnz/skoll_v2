@@ -19,29 +19,32 @@ impl LauncherModule for Calculator {
             result: String::new()
         }
     }
-    fn on_activate (&mut self) {}
+    fn on_activate (&mut self, query: &str) {
+        self.update_query(query);
+    }
     fn needs_redraw (&self) -> bool {
         self.dirty_ui
     }
 
     fn key_tab (&mut self) {
-        // Handle key tab event for calculator
+        // TODO: Handle key tab event for calculator
     }
 
     fn key_home (&mut self) {
-        // Handle key home event for calculator
+        // TODO: Handle key home event for calculator
     }
 
     fn key_down (&mut self) {
-        // Handle key down event for calculator
+        // TODO: Handle key down event for calculator
     }
 
     fn key_up (&mut self) {
-        // Handle key up event for calculator
+        // TODO: Handle key up event for calculator
     }
 
-    fn key_enter (&mut self) {
-        // Handle key enter event for calculator
+    fn key_enter (&mut self) -> bool {
+        // TODO: Handle key enter event for calculator
+        false
     }
 
     fn update_query (&mut self, query: &str) {

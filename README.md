@@ -136,6 +136,8 @@ Calculator mode, valid expression
 - Make Niri integration optional
 - ~~Make accent color configurable~~ Done!
 - ~~Make background opacity / color configurable~~ Done!
+- ~~Reset query on activation~~ Done!
+- ~~Don't close layer on KEY_ENTER if no selection is active~~ Done!
 - Make min refresh rate configurable
 - Add history to the calculator
 - Add capability of variable usage to the calculator
