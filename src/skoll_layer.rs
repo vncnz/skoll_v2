@@ -552,14 +552,15 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
                 if let Some(info) = &data.data {
                     let (bat_symb, color) = match info["state"].as_str() {
                         Some("Charging") => { ("󱐋", get_color_gradient(data.warning)) },
-                        Some("Discharging") => { ("󰯆", get_color_gradient(data.warning.min(0.5))) },
-                        _ => { ("󰜥", get_color_gradient(data.warning)) }
+                        Some("Discharging") => { ("󰯆", get_color_gradient(data.warning.max(0.5))) },
+                        _ => { ("󱞜", get_color_gradient(data.warning)) }
                     };
                     let eta = info["eta"].as_f64().unwrap_or_default().round() as i32;
                     let h = eta / 60;
                     let m = eta % 60;
-                    let second = if eta > 0 { format!("{} {}h{}m", bat_symb, h, m) } else { bat_symb.into() };
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[BAT {:.0}%] [{}]", info["percentage"].as_f64().unwrap_or(0.0), second), color)));
+                    let perc = info["percentage"].as_f64().unwrap_or(0.0);
+                    let text: String = if eta > 0 { format!("[BAT {:.0}%] [{} {}h{}m]", perc, bat_symb, h, m).to_string() } else { format!("[BAT {perc:.0}%]").to_string() };
+                    toadd = Some((res.to_string(), InfoUnit::new(text, color)));
                 }
             },
             "ratatoskr" => {
