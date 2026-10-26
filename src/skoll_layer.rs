@@ -502,6 +502,7 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
         let res = data.resource.as_str();
 
         let mut toadd: Option<(String, InfoUnit)> = None;
+        let mut reset = false;
         let color = get_color_gradient(data.warning);
         match res {
             "loadavg" => {
@@ -567,6 +568,7 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
                 if data.warning == 1.0 {
                     toadd = Some((res.to_string(), InfoUnit::new(format!("[RATATOSKR DISCONNECTED]"), color)));
                 }
+                reset = true;
             },
             "display" => {},
             "weather" => {
@@ -610,6 +612,9 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
             }
         }
 
+        if reset {
+            self.ratatoskr_module.reset();
+        }
         if let Some((key, unit)) = toadd {
             self.ratatoskr_module.update(key, unit);
         }

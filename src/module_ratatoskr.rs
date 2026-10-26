@@ -36,8 +36,15 @@ impl RatatoskrModule {
         self.dirty_ui
     }
 
+    pub fn reset (&mut self) {
+        self.info_units.clear();
+    }
+
     pub fn update (&mut self, id: String, unit: InfoUnit) {
         // eprintln!("Updating RatatoskrModule with id: {}, text: {}, color: {:?}", id, unit.text, unit.color);
+        /* if id == "ratatoskr" {
+            self.info_units.clear();
+        } */
         if !self.sorted_keys.contains(&id) {
             self.sorted_keys.push(id.clone());
         }
