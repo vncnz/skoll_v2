@@ -134,13 +134,16 @@ Calculator mode, valid expression
 - ~~Cache app icons~~ Done!
 - ~~Make Ratatoskr integration optional~~ Done!
 - ~~Improve ratatoskr connection/disconnection management~~ Done!
-- Make Niri integration optional
 - ~~Make accent color configurable~~ Done!
 - ~~Make background opacity / color configurable~~ Done!
 - ~~Reset query on activation~~ Done!
 - ~~Don't close layer on KEY_ENTER if no selection is active~~ Done!
-- Add history to the calculator
-- Add capability of variable usage to the calculator
-- Cache app icons _before_ first opening (at daemon launch, for example)
-- Add a config parameter for Ratatoskr information updates? For example, a fixed time (like now, but configurable) or the string "on-update" or "never"/"on-clock"
+- ~~Add history to the calculator~~ Done!
+- ~~Add capability of variable usage to the calculator~~ Done!
+- Add capability of editing calc history entries?
+- Lock the user in calc mode if a calculation is done and the current query starts with a letter valid for history recall?
+- ~~Cache app icons _before_ first opening (at daemon launch, for example)~~ Done!
+- Add a config parameter for Ratatoskr information updates? For example, a fixed time (like now, but configurable) or the string "on-update" or "never"/"next-tick"
 - Add a clock?
+- Make Niri integration optional
+- 
