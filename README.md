@@ -132,8 +132,8 @@ Calculator mode, valid expression
 ## TODOs
 
 - ~~Cache app icons~~ Done!
-- Make Ratatoskr integration optional
-- Improve ratatoskr connection/disconnection management
+- ~~Make Ratatoskr integration optional~~ Done!
+- ~~Improve ratatoskr connection/disconnection management~~ Done!
 - Make Niri integration optional
 - ~~Make accent color configurable~~ Done!
 - ~~Make background opacity / color configurable~~ Done!

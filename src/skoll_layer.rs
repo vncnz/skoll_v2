@@ -565,7 +565,7 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
                 }
             },
             "ratatoskr" => {
-                if data.warning == 1.0 {
+                if data.warning == 1.0 && !self.config.hide_missing_ratatoskr {
                     toadd = Some((res.to_string(), InfoUnit::new(format!("[RATATOSKR DISCONNECTED]"), color)));
                 }
                 reset = true;
