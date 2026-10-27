@@ -45,7 +45,7 @@ pub trait LauncherModule {
 
 
 
-
+#[derive(PartialEq)]
 pub enum LauncherMode {
     Search,
     Calculator
@@ -90,14 +90,13 @@ impl Launcher {
     }
 
     pub fn handle_key_char(&mut self, c: char) {
+        if self.query.len() == 0 && self.mode != LauncherMode::Search { self.mode = LauncherMode::Search; }
         self.query.push(c);
+        // self.search.update_query(self.query.clone().as_str());
         match self.mode {
-            LauncherMode::Calculator => {
-                self.mode = LauncherMode::Search;
-            },
-            _ => {}
-        };
-        self.search.update_query(self.query.clone().as_str());
+            LauncherMode::Search => self.search.update_query(self.query.clone().as_str()),
+            LauncherMode::Calculator => self.calculator.update_query(self.query.clone().as_str())
+        }
     }
 
     pub fn handle_key_space (&mut self) {
@@ -107,14 +106,13 @@ impl Launcher {
     }
 
     pub fn handle_key_num(&mut self, c: char) {
+        if self.query.len() == 0 && self.mode != LauncherMode::Calculator { self.mode = LauncherMode::Calculator; }
         self.query.push(c);
+        // self.calculator.update_query(self.query.clone().as_str());
         match self.mode {
-            LauncherMode::Search => {
-                self.mode = LauncherMode::Calculator;
-            },
-            _ => {}
-        };
-        self.calculator.update_query(self.query.clone().as_str());
+            LauncherMode::Search => self.search.update_query(self.query.clone().as_str()),
+            LauncherMode::Calculator => self.calculator.update_query(self.query.clone().as_str())
+        }
     }
 
     pub fn key_reset_query (&mut self) {
