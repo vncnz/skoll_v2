@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::config::Config;
 use crate::launcher_data::{AppEntry, launch_detached, update_launch_history};
-use crate::launcher_ui::{LauncherModule, X_POINT, Y_POINT};
+use crate::launcher_ui::{LauncherModule};
 use crate::niri::{NiriWindow, focus_niri_window, get_niri_windows};
 use crate::time_of_scope::TimeOfScope;
 use crate::utils::{cr_draw_image, cr_text_aligned, cr_color};
@@ -120,13 +120,13 @@ impl LauncherModule for Search {
         self.dirty_ui = true;
     }
 
-    fn draw (&mut self, config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
+    fn draw (&mut self, config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, x_alignment: f64, y_alignment: f64) {
 
         eprintln!("{} {:?}", "DRAWING SEARCH".green(), self.query);
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.set_font_size(18.0);
-        cr_text_aligned(cr, "execute".into(), X_POINT, Y_POINT, 1.0, 0.0);
+        cr_text_aligned(cr, "execute".into(), x_alignment, y_alignment, 1.0, 0.0);
 
         // let accent = (1.0, 0.2, 0.5, 1.0);
         // let white = (1.0, 1.0, 1.0, 1.0);
@@ -141,18 +141,18 @@ impl LauncherModule for Search {
 
             // Previous option (if any)
             if self.results_index > 0 {
-                let (_xt, _yt) = self.draw_app_result(&cr, self.results_index - 1, true, X_POINT, Y_POINT - 24.0, gray1);
+                let (_xt, _yt) = self.draw_app_result(&cr, self.results_index - 1, true, x_alignment, y_alignment - 24.0, gray1);
             }
 
             // Selected option
-            let (xt, _yt) = self.draw_app_result(&cr, self.results_index, false, X_POINT, Y_POINT, gray0);
+            let (xt, _yt) = self.draw_app_result(&cr, self.results_index, false, x_alignment, y_alignment, gray0);
 
             // Draw options for the selected line
-            let mut xx = X_POINT + xt + 20.0;
+            let mut xx = x_alignment + xt + 20.0;
             let opts = self.options.len();
             for opt in 0..opts {
                 cr_color(&cr, if self.option_index == opt { config.accent_color } else { gray1 });
-                let (lx, _) = cr_text_aligned(cr, self.options[opt].clone().into(), xx, Y_POINT, 0.0, 0.0);
+                let (lx, _) = cr_text_aligned(cr, self.options[opt].clone().into(), xx, y_alignment, 0.0, 0.0);
                 xx += lx + 8.0;
             }
 
@@ -163,14 +163,14 @@ impl LauncherModule for Search {
                 (3, gray3)
             ] {
                 if self.results_index + idx < self.results.len() {
-                    let (_xt, _yt) = self.draw_app_result(&cr, self.results_index + idx, true, X_POINT, Y_POINT + (24.0 * idx as f64), color);
+                    let (_xt, _yt) = self.draw_app_result(&cr, self.results_index + idx, true, x_alignment, y_alignment + (24.0 * idx as f64), color);
                 }
             }
 
             // rounded_rect_gradient(cr, sep, 0.0, 10.0, 30.0, 0.0, vec![(0.0, (1.0, 0.0, 0.0, 0.4))], crate::utils::GradientDirection::Horizontal, false, None);
 
         } else {
-            cr_text_aligned(cr, "No results".into(), X_POINT + 80.0, Y_POINT, 0.0, 0.0);
+            cr_text_aligned(cr, "No results".into(), x_alignment + 80.0, y_alignment, 0.0, 0.0);
         }
 
         self.dirty_ui = false;

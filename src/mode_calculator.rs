@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::eprint;
 
 use crate::config::Config;
-use crate::launcher_ui::{LauncherModule, X_POINT, Y_POINT};
+use crate::launcher_ui::{LauncherModule};
 use crate::utils::{cr_color, cr_text_aligned};
 
 pub struct Calculator {
@@ -78,7 +78,7 @@ impl LauncherModule for Calculator {
         self.dirty_ui = true;
     }
 
-    fn draw (&mut self, config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, _x: f64, _y: f64) {
+    fn draw (&mut self, config: &Config, cr: &Context, _rect_width: f64, _rect_height: f64, x_alignment: f64, y_alignment: f64) {
 
         self.dirty_ui = false;
 
@@ -86,15 +86,15 @@ impl LauncherModule for Calculator {
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
         cr.set_font_size(18.0);
-        cr_text_aligned(cr, "calculate".into(), X_POINT, Y_POINT, 1.0, 0.5);
+        cr_text_aligned(cr, "calculate".into(), x_alignment, y_alignment, 1.0, 0.5);
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-        let (xt,_yt) = cr_text_aligned(cr, self.query.clone(), X_POINT + 36.0, Y_POINT, 0.0, 0.5);
+        let (xt,_yt) = cr_text_aligned(cr, self.query.clone(), x_alignment + 36.0, y_alignment, 0.0, 0.5);
 
         if !self.query.is_empty() {
             let text: String = if let Ok(res) = self.result { format!(" = {res}").to_string() } else { " ?".to_string() };
             cr.set_source_rgba(0.7, 0.7, 0.7, 1.0);
-            let (_xt,_yt) = cr_text_aligned(cr, text, X_POINT + 36.0 + xt + 10.0, Y_POINT, 0.0, 0.5);
+            let (_xt,_yt) = cr_text_aligned(cr, text, x_alignment + 36.0 + xt + 10.0, y_alignment, 0.0, 0.5);
         }
 
         let len = self.history.len();
@@ -102,17 +102,17 @@ impl LauncherModule for Calculator {
 
             let (query, result) = self.history.get(i).unwrap();
             cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
-            let (xt,_yt) = cr_text_aligned(cr, query.clone(), X_POINT + 36.0, Y_POINT + ((i+1) as f64)*24.0, 0.0, 0.5);
+            let (xt,_yt) = cr_text_aligned(cr, query.clone(), x_alignment + 36.0, y_alignment + ((i+1) as f64)*24.0, 0.0, 0.5);
 
             let text: String = format!(" = {result}").to_string();
             cr.set_source_rgba(0.7, 0.7, 0.7, 1.0);
-            let (_xt,_yt) = cr_text_aligned(cr, text, X_POINT + 36.0 + xt + 10.0, Y_POINT + ((i+1) as f64)*24.0, 0.0, 0.5);
+            let (_xt,_yt) = cr_text_aligned(cr, text, x_alignment + 36.0 + xt + 10.0, y_alignment + ((i+1) as f64)*24.0, 0.0, 0.5);
 
             let idx = len - i - 1;
             if let Ok(c) = std::str::from_utf8(&[(idx as u8 + 97)]) {
                 let text: String = format!("{c}").to_string();
                 cr_color(&cr, config.accent_color);
-                let (_xt,_yt) = cr_text_aligned(cr, text, X_POINT + 30.0, Y_POINT + ((i+1) as f64)*24.0, 1.0, 0.5);
+                let (_xt,_yt) = cr_text_aligned(cr, text, x_alignment + 30.0, y_alignment + ((i+1) as f64)*24.0, 1.0, 0.5);
             }
         }
 

@@ -400,7 +400,7 @@ impl SkollLayer {
         if let Some(_layer) = &self.layer {
             // eprintln!("{}", "DRAWING LAUNCHER IN LAYER".green());
             // let (width, height) = layer.current_size();
-            self.launcher.draw(&self.config, &cr, self.width as f64, self.height as f64, 300.0, 300.0);
+            self.launcher.draw(&self.config, &cr, self.width as f64, self.height as f64);
         }
     }
 

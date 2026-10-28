@@ -2,9 +2,6 @@ use cairo::Context;
 
 use crate::{config::Config, mode_calculator::Calculator, mode_search::Search, time_of_scope::TimeOfScope};
 
-pub static X_POINT: f64 = 600.0;
-pub static Y_POINT: f64 = 200.0;
-
 pub trait LauncherModule {
     // fn recalc (&mut self);
     fn new () -> Self where Self: Sized;
@@ -186,8 +183,10 @@ impl Launcher {
         };
     } */
 
-    pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64, x: f64, y: f64) {
+    pub fn draw (&mut self, config: &Config, cr: &Context, rect_width: f64, rect_height: f64) {
         let _time = TimeOfScope::new("launcher draw");
+        let x = rect_width / 3.0;
+        let y = rect_height / 4.0;
         match self.mode {
             LauncherMode::Calculator => self.calculator.draw(config, cr, rect_width, rect_height, x, y),
             LauncherMode::Search => self.search.draw(config, cr, rect_width, rect_height, x, y)
