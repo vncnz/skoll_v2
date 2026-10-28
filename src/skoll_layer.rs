@@ -504,7 +504,8 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
         let mut toadd: Option<(String, InfoUnit)> = None;
         let mut reset = false;
         let mut color = get_color_gradient(data.warning);
-        color = (color.0 / 2.0, color.1 / 2.0, color.2 / 2.0, 1.0);
+        let div = 2.0 - data.warning;
+        color = (color.0 / div, color.1 / div, color.2 / div, 1.0);
         match res {
             "loadavg" => {
                 if let Some(info) = &data.data {
@@ -560,7 +561,8 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
                     let eta = info["eta"].as_f64().unwrap_or_default().round() as i32;
                     let h = eta / 60;
                     let m = eta % 60;
-                    color = (color.0 / 2.0, color.1 / 2.0, color.2 / 2.0, 1.0);
+                    let div = 2.0 - data.warning;
+                    color = (color.0 / div, color.1 / div, color.2 / div, 1.0);
                     let perc = info["percentage"].as_f64().unwrap_or(0.0);
                     let text: String = if eta > 0 { format!("[BAT {:.0}%] [{} {}h{}m]", perc, bat_symb, h, m).to_string() } else { format!("[BAT {perc:.0}%]").to_string() };
                     toadd = Some((res.to_string(), InfoUnit::new(text, color)));
