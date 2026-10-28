@@ -1,18 +1,16 @@
 use signal_hook::{consts::{SIGHUP, SIGINT, SIGPIPE, SIGTERM}, iterator::Signals, low_level::signal_name};
 
-use serde::Deserialize;
 use smithay_client_toolkit::{
     compositor::CompositorState, output::OutputState, registry::RegistryState, seat::SeatState, shell::wlr_layer::LayerShell, shm::Shm
 };
-use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::{wl_compositor, wl_output::WlOutput}};
+use wayland_client::{Connection, EventQueue, globals::{GlobalList, registry_queue_init}, protocol::wl_compositor};
 
 use std::{sync::mpsc::{self, Receiver, Sender}, time::Duration};
 
 use std::panic;
-use std::thread;
 
 use crate::{
-    commands::start_command_listener, data::{BatteryDevice, BluetoothStats, IconChange, RatatoskrSocket, UPowerDeviceKind}, time_of_scope::TimeOfScope, utils::{get_color_gradient, log_to_file, select_icon}
+    commands::start_command_listener, data::RatatoskrSocket, time_of_scope::TimeOfScope, utils::log_to_file
 };
 
 mod data;
@@ -22,8 +20,6 @@ mod skoll_layer;
 mod commands;
 mod niri;
 mod utils;
-// mod battery;
-// mod pills;
 mod launcher_ui;
 mod mode_calculator;
 mod mode_search;

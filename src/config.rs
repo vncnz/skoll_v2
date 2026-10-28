@@ -1,11 +1,7 @@
 use std::fs;
 
-use rand::Rng;
+// use rand::Rng;
 use serde::{Deserialize, Deserializer};
-
-fn default_show_devices_battery_max_level() -> f64 {
-    80.0
-}
 
 fn default_background_color() -> (f64, f64, f64, f64) {
     (0.0, 0.0, 0.0, 0.85)
@@ -15,18 +11,10 @@ fn default_accent_color() -> (f64, f64, f64, f64) {
     (1.0, 0.2, 0.5, 1.0)
 }
 
-fn default_frame_color() -> FrameColor {
-    FrameColor::None
-}
-
 fn default_hide_missing_ratatoskr() -> bool {
     false
 }
-
-fn default_show_watts() -> bool {
-    false
-}
-
+/*
 #[derive(Debug, Clone)]
 pub enum FrameColor {
     None,
@@ -80,18 +68,12 @@ impl<'de> Deserialize<'de> for FrameColor {
             }
         }
     }
-}
+}*/
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    #[serde(default = "default_frame_color")]
-    pub frame_color: FrameColor,
-    #[serde(default = "default_show_devices_battery_max_level")]
-    pub show_devices_battery_max_level: f64,
     #[serde(default = "default_hide_missing_ratatoskr")]
     pub hide_missing_ratatoskr: bool,
-    #[serde(default = "default_show_watts")]
-    pub show_watts: bool,
     #[serde(
         default = "default_background_color",
         deserialize_with = "deserialize_color"
@@ -108,10 +90,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            frame_color: FrameColor::None,
-            show_devices_battery_max_level: default_show_devices_battery_max_level(),
             hide_missing_ratatoskr: false,
-            show_watts: false,
             background_color: default_background_color(),
             accent_color: default_accent_color(),
         }
