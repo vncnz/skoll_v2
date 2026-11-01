@@ -852,7 +852,7 @@ impl KeyboardHandler for SkollLayer {
             } else if is_number_key(u32::from(event.keysym)) && let Some(c) = event.keysym.key_char() {
                 self.launcher.handle_key_num(c);
             } else if let Some(c) = event.keysym.key_char() {
-                if "+-*/()".contains(c) {
+                if "+-*/().".contains(c) {
                     self.launcher.handle_key_num(c);
                 } else {
                     eprintln!("{} {:?}", "KEY PRESSED".red(), event);
