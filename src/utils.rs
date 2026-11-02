@@ -9,6 +9,16 @@ macro_rules! dbg_println {
         println!($($arg)*);
     };
 }
+
+#[macro_export]
+macro_rules! jstr {
+    ($value:expr, $key:expr, $default:expr) => {
+        $value.get($key)
+            .and_then(|v| v.as_str())
+            .unwrap_or($default)
+    };
+}
+
 /*
 type Color = (f64, f64, f64, f64);
 pub fn mix_color(c1: Color, c2: Color, t: f64) -> Color {
@@ -58,7 +68,7 @@ pub fn get_color_gradient_full(min: f64, max: f64, value: f64, reversed: bool) -
     ((r as f64) / 255.0, (g as f64) / 255.0, (b as f64) / 255.0, 1.0)
 }
 
-pub fn select_icon<T: Clone>(min: f64, max: f64, value: f64, icons: &[T]) -> Option<T> {
+/* pub fn select_icon<T: Clone>(min: f64, max: f64, value: f64, icons: &[T]) -> Option<T> {
     if icons.is_empty() || min >= max {
         return None;
     }
@@ -70,7 +80,7 @@ pub fn select_icon<T: Clone>(min: f64, max: f64, value: f64, icons: &[T]) -> Opt
     let idx: usize = ((norm * icons.len() as f64).floor() as usize).min(icons.len() - 1);
 
     icons.get(idx).cloned()
-}
+} */
 
 fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (u8, u8, u8) {
     let c = v * s;
@@ -113,7 +123,7 @@ pub fn log_to_file(msg: String) {
 
 
 
-use std::time::{Duration, Instant};
+// use std::time::{Duration, Instant};
 
 use cairo::Context;
 
@@ -138,7 +148,7 @@ pub struct Animation {
 
     */
 
-pub enum Easing {
+/* pub enum Easing {
     #[allow(unused)]
     Linear,
     #[allow(unused)]
@@ -179,7 +189,7 @@ pub fn ease(e: Easing, t: f64) -> f64 {
             }
         }
     }
-}
+} */
 
 /*
 
@@ -411,7 +421,7 @@ use cairo::Error;
     Ok((layout, (w, h)))
 } */
 
-pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64, max_width: Option<f64>) -> Result<(pango::Layout, (f64, f64)), Error> {
+/* pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64, max_width: Option<f64>) -> Result<(pango::Layout, (f64, f64)), Error> {
 
     let layout = pangocairo::functions::create_layout(cr);
 
@@ -436,7 +446,7 @@ pub fn cr_text_layout(cr: &Context, text: &str, font_size: f64, max_width: Optio
     let h = logical_rect.height() as f64 / pango::SCALE as f64;
     
     Ok((layout, (w, h)))
-}
+} */
 
 const ICON_CACHE_MAX_ENTRIES: usize = 128;
 const ICON_CACHE_MAX_TARGET_SIZE: f64 = 64.0;
@@ -659,7 +669,7 @@ pub fn rounded_big_hole (cr: &Context, x: f64, y: f64, w: f64, h: f64, r: f64, r
 
 // use cairo::Context;
 // use std::f64::consts::PI;
-
+/* 
 #[derive(PartialEq)]
 pub enum Anchor {
     TopLeft, TopCenter, TopRight,
@@ -667,6 +677,7 @@ pub enum Anchor {
     BottomRight, BottomCenter, BottomLeft,
     LeftCenter,
 }
+*/
 
 /* pub struct ReservedSpace {
     pub anchor: Anchor,
@@ -960,7 +971,7 @@ pub fn rounded_rect_gradient(
     }
 } */
 
-pub struct TweenState {
+/* pub struct TweenState {
     current: f64,
     target: f64,
     animation_from: f64,
@@ -1023,7 +1034,7 @@ impl TweenState {
     /* pub fn is_animating(&self) -> bool {
         self.animation_start.is_some()
     } */
-}
+} */
 
 #[cfg(test)]
 mod tests {

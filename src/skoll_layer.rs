@@ -1,4 +1,3 @@
-use serde::Deserialize;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_registry, delegate_seat, delegate_shm, output::{OutputHandler, OutputState}, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, seat::{Capability, SeatHandler, SeatState, keyboard::{KeyEvent, KeyboardHandler, Modifiers}}, shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure}, shm::{Shm, ShmHandler, slot::{Buffer, SlotPool}}
 };
@@ -10,12 +9,10 @@ use std::{eprintln, num::NonZeroU32, time::{Duration, Instant}};
 
 use smithay_client_toolkit::shell::WaylandSurface;
 
-use std::collections::HashMap;
-
 use wayland_client::Dispatch;
 use colored::Colorize;
 
-use crate::{config::Config, data::{AlarmIcon, BatteryDevice, BluetoothStats, IconChange, PartialMsg, UPowerDeviceKind}, dbg_println, module_ratatoskr::{InfoUnit, RatatoskrModule}, time_of_scope::TimeOfScope, utils::{TweenState, cr_color, get_color_gradient, log_to_file}};
+use crate::{config::Config, data::PartialMsg, dbg_println, module_ratatoskr::RatatoskrModule, time_of_scope::TimeOfScope, utils::{cr_color, log_to_file}};
 
 use crate::launcher_ui::Launcher;
 
@@ -51,7 +48,7 @@ pub struct SkollLayer {
     pub(crate) height: u32,
     pub(crate) first_configure: bool,
     // pub(crate) input_region: Option<wl_region::WlRegion>,
-    pub(crate) icons: HashMap<String, AlarmIcon>,
+    // pub(crate) icons: HashMap<String, AlarmIcon>,
     // pub(crate) battery_integrated: Option<crate::battery::BatteryStats>,
     pub(crate) needs_redraw: bool,
     pub(crate) last_redraw: Instant,
@@ -59,14 +56,12 @@ pub struct SkollLayer {
     pub(crate) buffers: [Option<Buffer>; 2],
     pub(crate) current_buffer_idx: usize,
     pub(crate) config: crate::config::Config,
-    pub(crate) wob_value: TweenState,
-    pub(crate) wob_expiration: Option<Instant>,
-    pub(crate) ratatoskr_connected: bool,
+    // pub(crate) ratatoskr_connected: bool,
     // pub(crate) animator: Animator,
     // pub(crate) frame_model: FrameModel,
     pub(crate) is_waiting_for_frame: bool,
-    pub(crate) batteries: Vec<BatteryDevice>,
-    pub(crate) batteries_pristine: bool,
+    // pub(crate) batteries: Vec<BatteryDevice>,
+    // pub(crate) batteries_pristine: bool,
     // pub pill_container: Pill,
     pub(crate) pills_are_animating: bool,
     pub(crate) layer_visible: bool,
@@ -115,8 +110,8 @@ impl SkollLayer {
             height: 1,
             first_configure: true,
             // input_region: Some(empty_region),
-            icons: HashMap::new(),
-            ratatoskr_connected: false,
+            // icons: HashMap::new(),
+            // ratatoskr_connected: false,
             // battery_integrated: None,
             needs_redraw: true,
             last_redraw: Instant::now(),
@@ -124,13 +119,11 @@ impl SkollLayer {
             buffers: [None, None],
             current_buffer_idx: 0,
             config,
-            wob_expiration: None,
-            wob_value: TweenState::new(0.0),
             // animator: Animator::new(),
             // frame_model: FrameModel::new(),
             is_waiting_for_frame: false,
-            batteries: vec![],
-            batteries_pristine: false,
+            // batteries: vec![],
+            // batteries_pristine: false,
             // pill_container: pill,
             pills_are_animating: false,
             layer_visible: false,
@@ -234,12 +227,6 @@ impl SkollLayer {
         }*/
     } */
 
-    pub fn update_devices_data (&mut self, _data: Vec<BatteryDevice>) {
-        /*self.batteries = data;
-        self.batteries_pristine = true;
-        let _ = self.pill_container.update_data_devices(self.batteries.clone());*/
-    }
-
     pub fn check_redraw_timeout(&mut self) {
         /*if self.last_redraw.elapsed() > self.redraw_interval[1] {
         } else if self.pill_container.update_data_clock() {
@@ -266,15 +253,7 @@ impl SkollLayer {
             // eprintln!("=============== CLEAN PILL ============");
         }*/
 
-        // Check if wob-like must be closed
-        /*if let Some(exp) = self.wob_expiration {
-            if Instant::now() > exp {
-                self.wob_value.set_target(0.0);
-                self.wob_expiration = None;
-            }
-        }*/
-
-        let animating = self.wob_value.step() || self.pills_are_animating;
+        let animating = self.pills_are_animating;
         if !animating { // Now, we skip calling draw only if we are not animating something
 
             if !self.needs_redraw {
@@ -412,62 +391,6 @@ impl SkollLayer {
         }
     }
 
-    /* fn draw_test_pill (&mut self, cr: &Context) {
-        self.pills_are_animating = false;
-
-        /*if self.pill_container.needs_recalc {
-            dbg_println!("===============   RECALC   ============");
-            self.pill_container.recalculate_normal_target();
-        }
-
-
-        // UPDATE ANIMATIONS
-        if self.pill_container.step_animation() {
-            self.pills_are_animating = true;
-            self.request_redraw("pill_container animation");
-        } else {
-            // eprintln!("Pill container is NOT animating");
-        }
-
-        // OLD?
-        
-
-        let r = 8.0;
-        let pill_bg_color: (f64, f64, f64, f64) = self.pill_container.get_bg_color();
-        let mut pill_border_color: Option<(f64, f64, f64, f64)> = match self.config.pill_border_color {
-            FrameColor::Rgba(r, g, b, a) => Some((r, g, b, a)),
-            FrameColor::WorstResource => self
-                .icons
-                .values()
-                .max_by(|a, b| a.warn.partial_cmp(&b.warn).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|icon| icon.color),
-            FrameColor::None /* | FrameColor::Random */ => None
-        };
-
-        let (rect_width, rect_height) = self.pill_container.get_current_rect();
-        let (rect_width_end, _rect_height_end) = self.pill_container.get_desired_rect();
-        let rect_left = (self.width as f64 - rect_width) / 2.0;
-        let rect_left_end = (self.width as f64 - rect_width_end) / 2.0;
-        let rect_top = 2.0;
-
-        let mut pill_bg_steps = vec![(0.0, pill_bg_color)];
-
-        // wob-like
-        let wob_ratio = self.wob_value.value();
-        if wob_ratio > 0.0 {
-            let wob_color_base = (0.6, 0.6, 0.7, pill_bg_color.3);
-            let wob_color = mix_color(pill_bg_color, wob_color_base, wob_ratio.max(0.5));
-            pill_border_color = Some(mix_color(pill_border_color.unwrap_or((0.0, 0.0, 0.0, 0.0)), wob_color_base, wob_ratio));
-            let mut steps = vec![(0.0, wob_color)];
-            steps.push((wob_ratio, pill_bg_color));
-            pill_bg_steps = steps;
-        }
-
-        rounded_rect_gradient(&cr, rect_left, rect_top, rect_width, rect_height, r, pill_bg_steps, crate::utils::GradientDirection::Horizontal, false, pill_border_color);
-
-        self.pill_container.draw(&cr, rect_width_end, rect_height, rect_left_end, rect_top);*/
-    } */
-
     fn draw_background(&mut self, cr: Context) {
         cr.set_operator(cairo::Operator::Source);
 
@@ -488,140 +411,10 @@ impl SkollLayer {
     }
 }
 
-macro_rules! jstr {
-    ($value:expr, $key:expr, $default:expr) => {
-        $value.get($key)
-            .and_then(|v| v.as_str())
-            .unwrap_or($default)
-    };
-}
-
 impl SkollLayer { // This is for icon/stuff management, I like to keep it separated
 
     pub fn process_partial_msg (&mut self, data: PartialMsg) {
-        let res = data.resource.as_str();
-
-        let mut toadd: Option<(String, InfoUnit)> = None;
-        let mut reset = false;
-        let mut color = get_color_gradient(data.warning);
-        let div = 2.0 - data.warning;
-        color = (color.0 / div, color.1 / div, color.2 / div, 1.0);
-        match res {
-            "loadavg" => {
-                if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[AVG {} {} {}]", info["m1"], info["m5"], info["m15"]), color)));
-                }
-            },
-            "ram" => {
-                if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[MEM {}% / SWP {}%]", info["mem_percent"], info["swap_percent"]), color)));
-                }
-            },
-            "disk" => {
-                if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[DSK {}%]", info["used_percent"]), color)));
-                }
-            },
-            "network" => {
-                if let Some(info) = &data.data {
-                    if info["conn_type"] == "ethernet" {
-                        toadd = Some((res.to_string(), InfoUnit::new("[ETH]".to_string().into(), color)));
-                    } else {
-                        toadd = Some((res.to_string(), InfoUnit::new(format!("[WLAN {}%] [IP {}] [NET {}]", info["signal"], info["ip"].as_str().unwrap(), info["ssid"].as_str().unwrap()), color)));
-                    }
-                }
-            },
-            "temperature" => {
-                if let Some(info) = &data.data {
-                    let v = info["value"].as_f64().unwrap_or(0.0);
-                    if v > 0.0 {
-                        toadd = Some((res.to_string(), InfoUnit::new(format!("[TEMP {:.0}°C]", v), color)));
-                    } else {
-                        toadd = Some((res.to_string(), InfoUnit::new("[NO TEMP]".to_owned(), color)));
-                    }
-                }
-            },
-            "volume" => {
-                if let Some(info) = &data.data {
-                    let v = info["value"].as_f64().unwrap_or(0.0);
-                    if v > 0.0 {
-                        toadd = Some((res.to_string(), InfoUnit::new(format!("[VOL {:.0}%]", v), color)));
-                    } else {
-                        toadd = Some((res.to_string(), InfoUnit::new("[MUTED]".to_owned(),  (0.4, 0.4, 0.4, 1.0))));
-                    }
-                }
-            },
-            "battery" => {
-                if let Some(info) = &data.data {
-                    let (bat_symb, mut color) = match info["state"].as_str() {
-                        Some("Charging") => { ("󱐋", get_color_gradient(data.warning)) },
-                        Some("Discharging") => { ("󰯆", get_color_gradient(data.warning.max(0.5))) },
-                        _ => { ("󱞜", get_color_gradient(data.warning)) }
-                    };
-                    let eta = info["eta"].as_f64().unwrap_or_default().round() as i32;
-                    let h = eta / 60;
-                    let m = eta % 60;
-                    let div = 2.0 - data.warning;
-                    color = (color.0 / div, color.1 / div, color.2 / div, 1.0);
-                    let perc = info["percentage"].as_f64().unwrap_or(0.0);
-                    let text: String = if eta > 0 { format!("[BAT {:.0}%] [{} {}h{}m]", perc, bat_symb, h, m).to_string() } else { format!("[BAT {perc:.0}%]").to_string() };
-                    toadd = Some((res.to_string(), InfoUnit::new(text, color)));
-                }
-            },
-            "ratatoskr" => {
-                if data.warning == 1.0 && !self.config.hide_missing_ratatoskr {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[RATATOSKR DISCONNECTED]"), color)));
-                }
-                reset = true;
-            },
-            "display" => {},
-            "weather" => {
-                // {"icon": "", "text": "Fog", "temp": 8, "temp_real": 9, "temp_unit": "°C", "day": "0", "icon_name": "fog.svg", "sunrise": "07:15", "sunset": "16:48", "sunrise_mins": 435, "sunset_mins": 1008, "daylight": 34385.75, "locality": "Desenzano Del Garda", "humidity": 99}
-                if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[{} {} {:.0}{}]", jstr!(info, "icon", ""), jstr!(info, "text", ""), info["temp"], jstr!(info, "temp_unit", "")), color)));
-                }
-            },
-            "bt-batteries" => {
-                if let Some(blue) = &data.data {
-                    if let Ok(b) = BluetoothStats::deserialize(blue.clone()) {
-                        let mut sp = "".to_string();
-                        // log_to_file(format!("{:?}", b));
-                        for dev in b.devices.clone().iter() { // .filter(|dv| dv.is_bluetooth) {
-                            let icon = match (&dev.kind, dev.is_bluetooth) {
-                                (UPowerDeviceKind::Mouse, true) => "󰦋",
-                                (UPowerDeviceKind::Mouse, false) => "󰍽",
-                                (UPowerDeviceKind::Phone, true) => "󰏳",
-                                (UPowerDeviceKind::Phone, false) => "󰏲",
-                                (UPowerDeviceKind::Tablet, _) => "",
-                                (UPowerDeviceKind::RemoteControl, _) => "󰻅",
-                                (UPowerDeviceKind::Speakers, _) => "󰦢",
-                                (UPowerDeviceKind::Headphones, true) => "󰥰",
-                                (UPowerDeviceKind::Headset, true) => "󰥰",
-                                (UPowerDeviceKind::GamingInput, _) => "󱤙",
-                                (UPowerDeviceKind::Keyboard, _) => "󰌌",
-                                (_, true) => "󰂱",
-                                (_, false) => "󰾰"
-                            };
-                            let prev = format!("{}", sp);
-                            sp = format!("{} [{} {:.0}%]", prev, icon, dev.percentage);
-                            // log_to_file(format!("{}", sp));
-                        }
-                        toadd = Some((res.to_string(), InfoUnit::new(sp, color)));
-
-                    }
-                }
-            },
-            _ => {
-                toadd = Some((res.to_string(), InfoUnit::new(format!("[{}]", data.resource), color)));
-            }
-        }
-
-        if reset {
-            self.ratatoskr_module.reset();
-        }
-        if let Some((key, unit)) = toadd {
-            self.ratatoskr_module.update(key, unit);
-        }
+        self.ratatoskr_module.process_new_message(data, self.config.hide_missing_ratatoskr);
     }
 
     /* pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
@@ -659,7 +452,7 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
         }*/IconChange::None
     } */
 
-    pub fn remove_icon(&mut self, id: &str) -> bool {
+    /* pub fn remove_icon(&mut self, id: &str) -> bool {
         let removed = self.icons.remove(id).is_some();
         /*if removed {
             if self.pill_container.update_data_warnings(&self.icons) {
@@ -668,18 +461,7 @@ impl SkollLayer { // This is for icon/stuff management, I like to keep it separa
             }
         }*/
         removed
-    }
-
-    pub fn show_value(&mut self, value: f64, _kind: Option<&str>) -> bool {
-        let target = value.clamp(0.0, 1.0);
-        let changed = self.wob_expiration.is_none() || (self.wob_value.target() - target).abs() > f64::EPSILON;
-        self.wob_expiration = Some(Instant::now() + Duration::from_millis(2000));
-        self.wob_value.set_target(target);
-        if changed {
-            self.request_redraw("wob value changed");
-        }
-        changed
-    }
+    } */
 }
 
 impl CompositorHandler for SkollLayer {

@@ -6,7 +6,7 @@ use crate::config::Config;
 use crate::launcher_data::{AppEntry, launch_detached, update_launch_history};
 use crate::launcher_ui::{LauncherModule};
 use crate::niri::{NiriWindow, focus_niri_window, get_niri_windows};
-use crate::time_of_scope::TimeOfScope;
+// use crate::time_of_scope::TimeOfScope;
 use crate::utils::{cr_draw_image, cr_text_aligned, cr_color};
 use crate::launcher_data::{load_app_entries, get_apps};
 

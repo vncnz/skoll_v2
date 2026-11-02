@@ -265,21 +265,16 @@ fn main() {
                         println!("cmd to be parsed: {}", cmd);
                         let parts: Vec<&str> = cmd.split(" ").collect();
                         match parts.as_slice() {
-                            ["timer", _value_str] => {}
+                            // ["timer", _value_str] => {}
                             
-                            [kind, value_str] => {
-                                match value_str.parse::<f64>() {
-                                    Ok(value) => { app.show_value(value, Some(*kind)); },
-                                    Err(_) => { eprintln!("Invalid number: {}", value_str); }
-                                }
-                            }
+                            // [kind, value_str] => {}
 
-                            [value_str] => {
+                            /* [value_str] => {
                                 match value_str.parse::<f64>() {
                                     Ok(value) => { app.show_value(value, None); },
                                     Err(_) => { eprintln!("Invalid number: {}", value_str); }
                                 }
-                            }
+                            } */
 
                             _ => {
                                 eprintln!("Unknown command");
