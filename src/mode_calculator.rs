@@ -72,6 +72,7 @@ impl LauncherModule for Calculator {
                     map.insert(c.into(), *v);
                 }
             }
+
         }
         self.result = fasteval::ez_eval(query, &mut map);
         self.query = query.to_string();
@@ -115,6 +116,11 @@ impl LauncherModule for Calculator {
                 let (_xt,_yt) = cr_text_aligned(cr, text, x_alignment + 30.0, y_alignment + ((i+1) as f64)*24.0, 1.0, 0.5);
             }
         }
+    }
+}
 
+impl Calculator {
+    pub(crate) fn has_history(&self) -> bool {
+        !self.history.is_empty()
     }
 }
