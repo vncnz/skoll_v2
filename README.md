@@ -141,8 +141,9 @@ Calculator mode, valid expression
 - ~~Add history to the calculator~~ Done!
 - ~~Add capability of variable usage to the calculator~~ Done!
 - Add capability of editing calc history entries?
-- Lock the user in calc mode if a calculation is done and the current query starts with a letter valid for history recall?
+- ~~Lock the user in calc mode if a calculation is done and the current query starts with a letter valid for history recall~~
 - ~~Cache app icons _before_ first opening (at daemon launch, for example)~~ Done!
 - Add a config parameter for Ratatoskr information updates? For example, a fixed time (like now, but configurable) or the string "on-update" or "never"/"next-tick"
 - Add a clock?
+- Make ratatoskr data opacity depend on display brightness?
 - ~~Make Niri integration optional~~
