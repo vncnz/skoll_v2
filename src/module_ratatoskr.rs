@@ -49,6 +49,7 @@ impl RatatoskrModule {
         let mut toadd: Option<(String, InfoUnit)> = None;
         let mut reset = false;
         let mut color = get_color_gradient(data.warning);
+        color.3 = 0.5 + data.warning.powf(0.5);
         let div = 2.0 - data.warning;
         color = (color.0 / div, color.1 / div, color.2 / div, 1.0);
         match res {
