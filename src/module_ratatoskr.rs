@@ -179,7 +179,7 @@ impl RatatoskrModule {
             self.sorted_keys.push(id.clone());
         }
         self.info_units.insert(id, unit);
-        // self.dirty_ui = true;
+        self.dirty_ui = true;
     }
 
     pub fn draw (&mut self, _config: &Config, cr: &Context, _rect_width: f64, rect_height: f64) {

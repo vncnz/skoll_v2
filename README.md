@@ -85,7 +85,8 @@ You can configure colors with a json file in ```~/.config/skoll/config.json```:
 ```js
 {
     "background_color": [red,green,blue,alpha] | "random" | null,
-    "accent_color": [red,green,blue,alpha] | "random" | null
+    "accent_color": [red,green,blue,alpha] | "random" | null,
+    "ratatoskr_update_logic": number | "on_update" | "slow" | null
 }
 ```
 
@@ -94,7 +95,8 @@ For example:
 ```js
 {
     "background_color": [0.1, 0.2, 0.2, 0.9],
-    "accent_color": [0.6, 0.1, 0.0, 1.0]
+    "accent_color": [0.6, 0.1, 0.0, 1.0],
+    "ratatoskr_update_logic": 5
 }
 ```
 
@@ -102,12 +104,15 @@ For example:
 
 - `accent_color`: Accepts RGBA color values or `"random"`. When set to `"random"`, the color is automatically generated (Note: it is really random, at the moment, not a "nice random"). This is the color of the selector of existing windows.
 
+- `ratatoskr_update_logic`: Accepts a number, `"on_update"` or `"slow"`. When set to `"on_update"`, a new frame is drawn every time ratatoskr information is updated. When set on `"slow"`, a new frame is updated every 10 seconds. When set to a number X, a new frame is draw every X seconds. Whatever is set, a new frame is drawn if launcher/calculator requires it.
+
 Default values are the following:
 
 ```js
 {
     "background_color": [0.0, 0.0, 0.0, 0.85],
-    "accent_color": [1.0, 0.2, 0.5, 1.0]
+    "accent_color": [1.0, 0.2, 0.5, 1.0],
+    "ratatoskr_update_logic": "slow"
 }
 ```
 

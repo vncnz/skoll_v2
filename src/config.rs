@@ -3,6 +3,13 @@ use std::fs;
 // use rand::Rng;
 use serde::{Deserialize, Deserializer};
 
+#[derive(Debug, Clone)]
+pub enum RatatoskrUpdateLogic {
+    OnUpdate,
+    Slow,
+    OnTime(f64)
+}
+
 fn default_background_color() -> (f64, f64, f64, f64) {
     (0.0, 0.0, 0.0, 0.85)
 }
@@ -13,6 +20,11 @@ fn default_accent_color() -> (f64, f64, f64, f64) {
 
 fn default_hide_missing_ratatoskr() -> bool {
     false
+}
+
+fn default_ratatoskr_update_logic() -> RatatoskrUpdateLogic {
+    // RatatoskrUpdateLogic::OnTime(30.0)
+    RatatoskrUpdateLogic::Slow
 }
 /*
 #[derive(Debug, Clone)]
@@ -85,6 +97,12 @@ pub struct Config {
         deserialize_with = "deserialize_color"
     )]
     pub accent_color: (f64, f64, f64, f64),
+
+    #[serde(
+        default = "default_ratatoskr_update_logic",
+        deserialize_with = "deserialize_ratatoskr_update_logic"
+    )]
+    pub ratatoskr_update_logic: RatatoskrUpdateLogic
 }
 
 impl Default for Config {
@@ -93,6 +111,7 @@ impl Default for Config {
             hide_missing_ratatoskr: false,
             background_color: default_background_color(),
             accent_color: default_accent_color(),
+            ratatoskr_update_logic: default_ratatoskr_update_logic()
         }
     }
 }
@@ -111,6 +130,32 @@ where
         Err(serde::de::Error::custom(
             "background_color must be a 4-tuple with each value between 0.0 and 1.0",
         ))
+    }
+}
+
+fn deserialize_ratatoskr_update_logic<'de, D>(
+    deserializer: D,
+) -> Result<RatatoskrUpdateLogic, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+    match value {
+        serde_json::Value::String(s) if s == "on_update" => Ok(RatatoskrUpdateLogic::OnUpdate),
+        serde_json::Value::String(s) if s == "slow" => Ok(RatatoskrUpdateLogic::Slow),
+        serde_json::Value::Number(n) => {
+            if let Some(seconds) = n.as_f64() {
+                Ok(RatatoskrUpdateLogic::OnTime(seconds))
+            } else {
+                Err(serde::de::Error::custom(
+                    "ratatoskr_update_logic must be a number for OnTime variant",
+                ))
+            }
+        }
+        _ => Err(serde::de::Error::custom(
+            "ratatoskr_update_logic must be 'on_update', 'on_refresh', or a number for OnTime variant",
+        )),
     }
 }
 

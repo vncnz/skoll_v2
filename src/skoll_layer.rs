@@ -115,7 +115,7 @@ impl SkollLayer {
             // battery_integrated: None,
             needs_redraw: true,
             last_redraw: Instant::now(),
-            redraw_interval: [Duration::from_millis(16), Duration::from_millis(2_000)],
+            redraw_interval: [Duration::from_millis(16), Duration::from_millis(10_000)],
             buffers: [None, None],
             current_buffer_idx: 0,
             config,
@@ -241,17 +241,31 @@ impl SkollLayer {
 
     pub fn maybe_redraw(&mut self, qh: &QueueHandle<Self>) {
         // eprintln!("{} {:?}", "MAYBE REDRAW".green(), self.needs_redraw);
-        if self.launcher.needs_redraw()
+        /* if self.launcher.needs_redraw()
         || self.ratatoskr_module.needs_redraw()
         || self.last_redraw.elapsed() > self.redraw_interval[1] {
             self.needs_redraw = true;
-        }
-        /*if self.pill_container.needs_redraw || self.pill_container.needs_recalc {
+        } */
+
+        if self.launcher.needs_redraw() {
             self.needs_redraw = true;
-            // eprintln!("=============== DIRTY PILL ============");
-        } else {
-            // eprintln!("=============== CLEAN PILL ============");
-        }*/
+        }
+
+        match self.config.ratatoskr_update_logic {
+            crate::config::RatatoskrUpdateLogic::OnUpdate => {
+                self.needs_redraw |= self.ratatoskr_module.needs_redraw();
+            },
+            crate::config::RatatoskrUpdateLogic::Slow => {
+                if self.last_redraw.elapsed() > self.redraw_interval[1] {
+                    self.needs_redraw = true;
+                }
+            },
+            crate::config::RatatoskrUpdateLogic::OnTime(t) => {
+                if self.last_redraw.elapsed() > Duration::from_secs_f64(t) {
+                    self.needs_redraw = true;
+                }
+            }
+        }
 
         let animating = self.pills_are_animating;
         if !animating { // Now, we skip calling draw only if we are not animating something
@@ -409,59 +423,10 @@ impl SkollLayer {
         cr.rectangle(0.0, 0.0, w, h);
         cr.fill().unwrap();
     }
-}
-
-impl SkollLayer { // This is for icon/stuff management, I like to keep it separated
 
     pub fn process_partial_msg (&mut self, data: PartialMsg) {
         self.ratatoskr_module.process_new_message(data, self.config.hide_missing_ratatoskr);
     }
-
-    /* pub fn add_icon(&mut self, id: &str, symbol: &str, color: (f64, f64, f64, f64), warn: f64, info: Option<String>) -> IconChange {
-
-        // self.ratatoskr_module.update(id.to_string(), InfoUnit::new(info.clone().unwrap_or_else(||symbol.to_string()), color));
-        /* let mut already_present = false;
-        if let Some(found) = self.icons.get(id) {
-            already_present = true;
-            if f64::abs(found.warn - warn) < 0.05 && found.info == info {
-                return IconChange::None;
-            }
-        } */
-
-        self.icons.insert(
-            id.to_string(),
-            AlarmIcon {
-                symbol: symbol.to_string(),
-                color,
-                warn,
-                info
-            },
-        );
-        /*if already_present {
-            if self.pill_container.update_data_warnings(&self.icons) {
-                // self.pill_container.recalculate_normal_target();
-                // self.request_redraw("pill_container animation");
-            }
-            IconChange::Changed
-        } else {
-            if self.pill_container.update_data_warnings(&self.icons) {
-                // self.pill_container.recalculate_normal_target();
-                // self.request_redraw("pill_container animation");
-            }
-            IconChange::Added
-        }*/IconChange::None
-    } */
-
-    /* pub fn remove_icon(&mut self, id: &str) -> bool {
-        let removed = self.icons.remove(id).is_some();
-        /*if removed {
-            if self.pill_container.update_data_warnings(&self.icons) {
-                // self.pill_container.recalculate_normal_target();
-                // self.request_redraw("pill_container animation");
-            }
-        }*/
-        removed
-    } */
 }
 
 impl CompositorHandler for SkollLayer {
