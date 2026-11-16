@@ -50,7 +50,9 @@ pub fn get_niri_windows () -> Vec<NiriWindow> {
     let output = Command::new("niri").arg("msg").arg("-j").arg("windows").output();
     let stdout = String::from_utf8(output.unwrap().stdout).unwrap();
     // println!("\n{:?}", stdout);
-    serde_json::from_str(&stdout).expect("Failed to parse niri windows JSON")
+    serde_json::from_str(&stdout).unwrap_or_else(|err| {
+        panic!("Failed to parse niri windows JSON: {err}\nNiri windows JSON:\n{stdout}")
+    })
 }
 
 /* pub fn get_niri_workspaces () -> HashMap<u8, NiriWorkspace> {

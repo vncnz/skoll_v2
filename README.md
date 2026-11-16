@@ -152,3 +152,9 @@ Calculator mode, valid expression
 - Add a clock?
 - Make ratatoskr data opacity depend on display brightness?
 - ~~Make Niri integration optional~~
+
+## Known bugs
+
+[13:05:00.863] PANIC
+[13:05:00.863] panicked at src/niri.rs:53:35:
+Failed to parse niri windows JSON: Error("invalid type: null, expected a string", line: 1, column: 33)
