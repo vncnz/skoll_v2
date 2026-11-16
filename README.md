@@ -13,10 +13,12 @@ TODO <!-- ![Skoll Preview](screenshots/skoll.gif) -->
 ## About the project
 
 Skoll is built around a single, distraction-free active line that dynamically switches between two core modes based on your input:
+
 - **Application Launcher & Niri Opener:** Quickly searches and launches system applications. If a queried application already has active instances running in Niri, Skoll displays them alongside workspace indicators (e.g., `[ws 3]`), allowing you to instantly tab-cycle and focus an existing window or spawn a new one. The search is robust against typing errors.
 - **Instant Calculator:** Automatically detects mathematical expressions as you type, computing and displaying results inline in real time.
 
 There is one more feature, in the bottom line of the monitor:
+
 - **Ratatoskr Metrics Display:** Features a clean system footer powered by Ratatoskr data, keeping vital resource usage and performance stats visible at a glance without cluttering your workflow.
 
 That's all.
@@ -49,6 +51,7 @@ When I press a key, updating internal state and redraw the screen takes 1ms or l
 ### Framerate
 
 Skoll has a variable fps, because it redraws the layer only when it is triggered by two kind of events:
+
 - user pressed a key, so internal state is changed
 - two seconds are passed since last redraw, so information regarding computer health are obsolete
 
@@ -116,7 +119,6 @@ Default values are the following:
 }
 ```
 
-
 ## Screenshots
 
 Visual studio code as candidate app, two instances on different workspaces, selected new launch:
@@ -145,13 +147,13 @@ Calculator mode, valid expression
 - ~~Don't close layer on KEY_ENTER if no selection is active~~ Done!
 - ~~Add history to the calculator~~ Done!
 - ~~Add capability of variable usage to the calculator~~ Done!
-- Add capability of editing calc history entries?
 - ~~Lock the user in calc mode if a calculation is done and the current query starts with a letter valid for history recall~~
 - ~~Cache app icons _before_ first opening (at daemon launch, for example)~~ Done!
-- Add a config parameter for Ratatoskr information updates? For example, a fixed time (like now, but configurable) or the string "on-update" or "never"/"next-tick"
+- ~~Add a config parameter for Ratatoskr information updates? For example, a fixed time (like now, but configurable) or the string "on-update" or "never"/"next-tick"~~ Done!
+- ~~Make ratatoskr data opacity depend on display brightness?~~ Done!
+- ~~Make Niri integration optional~~ Done!
 - Add a clock?
-- Make ratatoskr data opacity depend on display brightness?
-- ~~Make Niri integration optional~~
+- Add capability of editing calc history entries?
 
 ## Known bugs
 
