@@ -83,7 +83,7 @@ impl RatatoskrModule {
                     if v > 0.0 {
                         toadd = Some((res.to_string(), InfoUnit::new(format!("[TEMP {:.0}°C]", v), color)));
                     } else {
-                        toadd = Some((res.to_string(), InfoUnit::new("[NO TEMP]".to_owned(), color)));
+                        toadd = Some((res.to_string(), InfoUnit::new("[NO TEMP]".to_owned(), (0.4, 0.4, 0.4, 1.0))));
                     }
                 }
             },
