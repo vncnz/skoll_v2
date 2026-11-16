@@ -12,8 +12,11 @@ pub struct Calculator {
     dirty_ui: bool,
     query: String,
     result: Result<f64, Error>,
-    history: Vec<(String, f64)>
+    history: Vec<(String, f64, String)>
 }
+
+static MAX_HISTORY_LEN: usize = 10;
+static LABELS: [&str; 13] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "l", "m", "n", "o"];
 
 impl LauncherModule for Calculator {
     fn new () -> Calculator {
@@ -50,7 +53,18 @@ impl LauncherModule for Calculator {
 
     fn key_enter (&mut self) -> bool {
         if let Ok(r) = self.result {
-            self.history.insert(0, (self.query.clone(), r));
+            if self.history.len() > MAX_HISTORY_LEN {
+                self.history.truncate(MAX_HISTORY_LEN);
+            }
+            let next_label = self
+                .history
+                .first()
+                .map(|(_, _, label)| label.as_str())
+                .and_then(|label| LABELS.iter().position(|candidate| *candidate == label))
+                .map(|pos| LABELS.iter().nth((pos + 1) % LABELS.len()).copied().unwrap())
+                .unwrap_or(LABELS.get(0).unwrap());
+
+            self.history.insert(0, (self.query.clone(), r, next_label.to_string()));
             self.query = String::new();
             self.result = Err(Error::EOF);
             self.dirty_ui = true;
@@ -64,10 +78,9 @@ impl LauncherModule for Calculator {
 
         let len = self.history.len();
         for i in 0..len {
-            let idx = len - i - 1;
-            if let Ok(c) = std::str::from_utf8(&[(idx as u8 + 97)]) {
+            if let Some((_q, v, c)) = self.history.get(i) {
                 eprint!("{} {c} {}", "Looking for char:".yellow(), query.contains(c));
-                if query.contains(c) && let Some((_q, v)) = self.history.get(i) {
+                if query.contains(c) {
                     eprint!("{} {c} = {v}", "Inserting char:".yellow());
                     map.insert(c.into(), *v);
                 }
@@ -101,7 +114,7 @@ impl LauncherModule for Calculator {
         let len = self.history.len();
         for i in 0..len {
 
-            let (query, result) = self.history.get(i).unwrap();
+            let (query, result, letter) = self.history.get(i).unwrap();
             cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
             let (xt,_yt) = cr_text_aligned(cr, query.clone(), x_alignment + 36.0, y_alignment + ((i+1) as f64)*24.0, 0.0, 0.5);
 
@@ -110,11 +123,11 @@ impl LauncherModule for Calculator {
             let (_xt,_yt) = cr_text_aligned(cr, text, x_alignment + 36.0 + xt + 10.0, y_alignment + ((i+1) as f64)*24.0, 0.0, 0.5);
 
             let idx = len - i - 1;
-            if let Ok(c) = std::str::from_utf8(&[(idx as u8 + 97)]) {
-                let text: String = format!("{c}").to_string();
-                cr_color(&cr, config.accent_color);
-                let (_xt,_yt) = cr_text_aligned(cr, text, x_alignment + 30.0, y_alignment + ((i+1) as f64)*24.0, 1.0, 0.5);
-            }
+            // if let Ok(c) = std::str::from_utf8(&[(idx as u8 + 97)]) {
+            let text: String = format!("{letter}").to_string();
+            cr_color(&cr, config.accent_color);
+            let (_xt,_yt) = cr_text_aligned(cr, text, x_alignment + 30.0, y_alignment + ((i+1) as f64)*24.0, 1.0, 0.5);
+            // }
         }
     }
 }
