@@ -49,41 +49,42 @@ impl RatatoskrModule {
         let mut toadd: Option<(String, InfoUnit)> = None;
         let mut reset = false;
         let mut color = get_color_gradient(data.warning);
-        color.3 = 0.5 + data.warning.powf(0.5);
-        let div = 2.0 - data.warning;
-        color = (color.0 / div, color.1 / div, color.2 / div, 1.0);
+        let div = 0.3 + 0.7*data.warning.powf(0.5);
+        color = (color.0 * div, color.1 * div, color.2 * div, 1.0);
         match res {
             "loadavg" => {
                 if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[AVG {} {} {}]", info["m1"], info["m5"], info["m15"]), color)));
+                    toadd = Some((res.to_string(), InfoUnit::new(format!("󰬢 {} {} {}", info["m1"], info["m5"], info["m15"]), color)));
                 }
             },
             "ram" => {
                 if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[MEM {}% / SWP {}%]", info["mem_percent"], info["swap_percent"]), color)));
+                    toadd = Some((res.to_string(), InfoUnit::new(format!("󰍛 {}% / {}%", info["mem_percent"], info["swap_percent"]), color)));
                 }
             },
             "disk" => {
                 if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[DSK {}%]", info["used_percent"]), color)));
+                    toadd = Some((res.to_string(), InfoUnit::new(format!("󰋊 {}%", info["used_percent"]), color)));
                 }
             },
             "network" => {
                 if let Some(info) = &data.data {
                     if info["conn_type"] == "ethernet" {
-                        toadd = Some((res.to_string(), InfoUnit::new("[ETH]".to_string().into(), color)));
+                        toadd = Some((res.to_string(), InfoUnit::new("󰈀".to_string().into(), color)));
                     } else {
-                        toadd = Some((res.to_string(), InfoUnit::new(format!("[WLAN {}%] [IP {}] [NET {}]", info["signal"], info["ip"].as_str().unwrap(), info["ssid"].as_str().unwrap()), color)));
+                        let icon = info["icon"].as_str().unwrap_or("󰤨");
+                        toadd = Some((res.to_string(), InfoUnit::new(format!("{icon} {}% {} {}", info["signal"], info["ip"].as_str().unwrap(), info["ssid"].as_str().unwrap()), color)));
                     }
                 }
             },
             "temperature" => {
                 if let Some(info) = &data.data {
                     let v = info["value"].as_f64().unwrap_or(0.0);
+                    let icon = info["icon"].as_str().unwrap_or("TEMP");
                     if v > 0.0 {
-                        toadd = Some((res.to_string(), InfoUnit::new(format!("[TEMP {:.0}°C]", v), color)));
+                        toadd = Some((res.to_string(), InfoUnit::new(format!("{} {:.0}°C", icon, v), color)));
                     } else {
-                        toadd = Some((res.to_string(), InfoUnit::new("[NO TEMP]".to_owned(), (0.4, 0.4, 0.4, 1.0))));
+                        toadd = Some((res.to_string(), InfoUnit::new("(NO TEMP)".to_owned(), (0.4, 0.4, 0.4, 1.0))));
                     }
                 }
             },
@@ -91,7 +92,7 @@ impl RatatoskrModule {
                 if let Some(info) = &data.data {
                     let v = info["value"].as_f64().unwrap_or(0.0);
                     if v > 0.0 {
-                        toadd = Some((res.to_string(), InfoUnit::new(format!("[VOL {:.0}%]", v), color)));
+                        toadd = Some((res.to_string(), InfoUnit::new(format!("VOL {:.0}%", v), color)));
                     } else {
                         toadd = Some((res.to_string(), InfoUnit::new("[MUTED]".to_owned(),  (0.4, 0.4, 0.4, 1.0))));
                     }
@@ -104,13 +105,15 @@ impl RatatoskrModule {
                         Some("Discharging") => { ("󰯆", get_color_gradient(data.warning.max(0.5))) },
                         _ => { ("󱞜", get_color_gradient(data.warning)) }
                     };
+                    let icon = info["icon"].as_str().unwrap_or("BAT");
                     let eta = info["eta"].as_f64().unwrap_or_default().round() as i32;
                     let h = eta / 60;
                     let m = eta % 60;
                     let div = 2.0 - data.warning;
                     color = (color.0 / div, color.1 / div, color.2 / div, 1.0);
                     let perc = info["percentage"].as_f64().unwrap_or(0.0);
-                    let text: String = if eta > 0 { format!("[BAT {:.0}%] [{} {}h{}m]", perc, bat_symb, h, m).to_string() } else { format!("[BAT {perc:.0}%]").to_string() };
+                    let watt = info["watt"].as_f64().unwrap_or(0.0);
+                    let text: String = if eta > 0 { format!("{icon} {perc:.0}% / {bat_symb} {h}h{m}m / {watt:.0}W").to_string() } else { format!("{icon} {perc:.0}% / {watt:.0}W").to_string() };
                     toadd = Some((res.to_string(), InfoUnit::new(text, color)));
                 }
             },
@@ -124,7 +127,7 @@ impl RatatoskrModule {
             "weather" => {
                 // {"icon": "", "text": "Fog", "temp": 8, "temp_real": 9, "temp_unit": "°C", "day": "0", "icon_name": "fog.svg", "sunrise": "07:15", "sunset": "16:48", "sunrise_mins": 435, "sunset_mins": 1008, "daylight": 34385.75, "locality": "Desenzano Del Garda", "humidity": 99}
                 if let Some(info) = &data.data {
-                    toadd = Some((res.to_string(), InfoUnit::new(format!("[{} {} {:.0}{}]", jstr!(info, "icon", ""), jstr!(info, "text", ""), info["temp"], jstr!(info, "temp_unit", "")), color)));
+                    toadd = Some((res.to_string(), InfoUnit::new(format!("{} {} {:.0}{}", jstr!(info, "icon", ""), jstr!(info, "text", ""), info["temp"], jstr!(info, "temp_unit", "")), color)));
                 }
             },
             "bt-batteries" => {
@@ -193,7 +196,7 @@ impl RatatoskrModule {
                 cr_color(&cr, unit.color);
                 let (lx, _) = cr_text_aligned_pango(cr, (&unit.text).into(), 14.0, xx, rect_height - 10.0, 0.0, 1.0).unwrap();
                 // let (lx, _) = cr_text_aligned(cr, (&unit.text).into(), xx, rect_height - 10.0, 0.0, 1.0);
-                xx += lx + 8.0;
+                xx += lx + 24.0;
             }
         }
         self.dirty_ui = false;
